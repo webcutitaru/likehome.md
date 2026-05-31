@@ -1,0 +1,36 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# User uploads (property photos, generated media)
+uploads/
+
+# Logs
+*.log
+error_log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# PHP / runtime
+.phpunit.result.cache
+.php-cs-fixer.cache

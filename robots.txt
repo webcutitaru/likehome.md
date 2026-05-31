@@ -1,0 +1,7 @@
+# Like HOME — dacă site-ul rulează într-un subfolder, actualizează linia Sitemap (ex. https://www.likehome.md/likehome2/sitemap.php).
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+
+Sitemap: https://www.likehome.md/sitemap.php

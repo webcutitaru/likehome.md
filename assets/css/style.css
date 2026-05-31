@@ -1,0 +1,533 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+:root {
+  /* Anthracite primary — logo circle (#5C5E62) + light slate surfaces */
+  --color-logo: 92 94 98;
+  --color-surface: 248 249 251;
+  --color-surface-2: 238 241 244;
+  /* Subtle neutral tint (badges, hovers) — not green */
+  --color-champagne: 216 218 222;
+  --color-cta: 74 103 65; /* #4A6741 — acțiuni (search, card, rezervare) */
+  --color-ink: 45 47 52;
+  --color-blue-grey: 120 125 133;
+  --color-muted: 120 125 133;
+
+  /* Calendar / brand (grey scale) */
+  --color-brand-50: 248 249 251;
+  --color-brand-100: 238 241 244;
+  --color-brand-500: 160 164 172;
+  --color-brand-600: 92 94 98;
+  --color-brand-700: 72 74 78;
+  --color-brand-900: 45 47 52;
+
+  /* CSS-friendly aliases */
+  --logo: rgb(var(--color-logo));
+  --surface: rgb(var(--color-surface));
+  --surface-2: rgb(var(--color-surface-2));
+  --champagne: rgb(var(--color-champagne));
+  --cta: rgb(var(--color-cta));
+  --ink: rgb(var(--color-ink));
+  --blue-grey: rgb(var(--color-blue-grey));
+  --muted: rgb(var(--color-muted));
+
+  /* Legacy aliases for older components */
+  --primary: var(--ink);
+  --accent: var(--logo);
+  --grey: var(--blue-grey);
+  --border: rgb(var(--color-ink) / 0.12);
+  --bg: var(--surface);
+  --white: #ffffff;
+
+  /* Brand palette aliases */
+  --brand-50: rgb(var(--color-brand-50));
+  --brand-100: rgb(var(--color-brand-100));
+  --brand-500: rgb(var(--color-brand-500));
+  --brand-600: rgb(var(--color-brand-600));
+  --brand-700: rgb(var(--color-brand-700));
+  --brand-900: rgb(var(--color-brand-900));
+
+  /* Effects */
+  --shadow-soft: 0 10px 30px rgb(0 0 0 / 0.12);
+  --shadow-medium: 0 18px 50px rgb(0 0 0 / 0.18);
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+}
+
+/* Base */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(
+      circle at top left,
+      rgb(var(--color-logo) / 0.06),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgb(var(--color-blue-grey) / 0.08),
+      transparent 24%
+    ),
+    linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  line-height: 1.5;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Reusable utilities for non-Tailwind pages (admin / legacy) */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.navbar {
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--logo);
+  color: var(--white);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.nav-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 30px;
+  list-style: none;
+  align-items: center;
+}
+
+.nav-links a {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: color 0.25s ease;
+}
+
+.nav-links a:hover {
+  color: rgb(var(--color-champagne));
+}
+
+.btn-list {
+  background: var(--logo);
+  color: var(--white) !important;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 12px !important;
+  font-weight: 700;
+  box-shadow: var(--shadow-soft);
+}
+
+.menu-toggle {
+  display: none;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 6px;
+  background: none;
+  border: none;
+}
+
+.menu-toggle span {
+  width: 25px;
+  height: 2px;
+  background: currentColor;
+}
+
+/* Shared component helpers */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--cta);
+  color: var(--white);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 12px 20px;
+  font-weight: 700;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+  box-shadow: var(--shadow-soft);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgb(var(--color-surface-2));
+  color: var(--ink);
+  border: 1px solid rgba(26, 32, 48, 0.08);
+  border-radius: var(--radius-md);
+  padding: 12px 20px;
+  font-weight: 700;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+  box-shadow: var(--shadow-soft);
+}
+
+.btn-secondary:hover {
+  filter: brightness(0.98);
+  transform: translateY(-1px);
+}
+
+.card-surface {
+  background: rgb(255 255 255 / 0.06);
+  border: 1px solid rgb(var(--color-ink) / 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-medium);
+  backdrop-filter: blur(10px);
+}
+
+.input-premium {
+  width: 100%;
+  border: 1px solid rgb(var(--color-ink) / 0.14);
+  background: rgb(255 255 255 / 0.06);
+  color: var(--ink);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.input-premium:focus {
+  border-color: var(--brand-600);
+  box-shadow: 0 0 0 4px rgb(var(--color-brand-600) / 0.12);
+  background: rgb(255 255 255 / 0.1);
+}
+
+/* Flatpickr */
+.flatpickr-calendar {
+  border-radius: 12px;
+  border: 1px solid rgba(26, 32, 48, 0.08);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+  background: rgb(var(--color-brand-600)) !important;
+  border-color: rgb(var(--color-brand-600)) !important;
+  color: #fff !important;
+}
+
+.flatpickr-day.inRange {
+  background: var(--brand-100);
+  border-color: var(--brand-100);
+  box-shadow:
+    -5px 0 0 var(--brand-100),
+    5px 0 0 var(--brand-100);
+}
+
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover {
+  color: #cbd5e1;
+  background: #f8fafc;
+  text-decoration: line-through;
+}
+
+/* Booking toast (property-details) */
+.lh-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(120%);
+  z-index: 110;
+  max-width: min(90vw, 24rem);
+  padding: 0.875rem 1.25rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.15);
+  border: 1px solid rgb(0 0 0 / 0.06);
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.lh-toast.lh-toast--visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.lh-toast--success {
+  background: rgb(var(--color-surface));
+  color: rgb(var(--color-ink));
+  border-color: rgb(var(--color-logo) / 0.2);
+}
+
+.lh-toast--error {
+  background: rgb(254 242 242);
+  color: rgb(127 29 29);
+  border-color: rgb(254 202 202);
+}
+
+/* Booking confirmation modal + success banner (property-details) */
+.lh-booking-confirm-root {
+  position: fixed;
+  inset: 0;
+  z-index: 125;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
+}
+
+.lh-booking-confirm-root.lh-booking-confirm-root--open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.lh-booking-confirm-root .lh-booking-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.45);
+}
+
+.lh-booking-confirm-root .lh-booking-confirm-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 28rem;
+  max-height: min(90vh, 640px);
+  overflow-y: auto;
+  margin: 0;
+  border-radius: 1.5rem 1.5rem 0 0;
+  background: rgb(var(--color-surface));
+  box-shadow: 0 -12px 48px rgb(0 0 0 / 0.18);
+  border: 1px solid rgb(0 0 0 / 0.08);
+}
+
+@media (min-width: 640px) {
+  .lh-booking-confirm-root {
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .lh-booking-confirm-root .lh-booking-confirm-panel {
+    border-radius: 1.25rem;
+    box-shadow: 0 24px 64px rgb(0 0 0 / 0.16);
+  }
+}
+
+.lh-booking-success-banner {
+  position: fixed;
+  left: 50%;
+  top: max(1rem, env(safe-area-inset-top));
+  transform: translateX(-50%) translateY(-120%);
+  z-index: 115;
+  width: min(calc(100vw - 2rem), 26rem);
+  pointer-events: auto;
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
+}
+
+.lh-booking-success-banner.lh-booking-success-banner--visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.lh-booking-success-banner__inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1rem 1rem 1.25rem;
+  border-radius: 1rem;
+  background: rgb(var(--color-surface));
+  color: rgb(var(--color-ink));
+  border: 1px solid rgb(var(--color-logo) / 0.22);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.12);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.lh-booking-success-banner__inner strong {
+  display: block;
+  font-size: 0.9375rem;
+  margin-bottom: 0.35rem;
+}
+
+.lh-booking-success-banner__close {
+  flex-shrink: 0;
+  margin: -0.25rem -0.25rem 0 0;
+  padding: 0.35rem 0.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: rgb(var(--color-ink));
+  font-weight: 700;
+  font-size: 0.75rem;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.lh-booking-success-banner__close:hover {
+  background: rgb(var(--color-brand-100));
+}
+
+/* Smooth transition for results container */
+#results-container {
+  transition: opacity 0.2s ease;
+}
+
+@media (max-width: 992px) {
+  .nav-links {
+    display: none;
+  }
+
+  .menu-toggle {
+    display: flex;
+  }
+}
+
+@media (max-width: 640px) {
+  select,
+  input,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Admin calendar (admin/calendar.php) — plasă de siguranță dacă
+   tailwind.build.css de pe server lipsește clase arbitrare (h-[...], min-h-0, …).
+   Nu înlocuiește tot Tailwind; asigură height/scroll/align când build-ul e vechi.
+   -------------------------------------------------------------------------- */
+/* Coloană: flex-1; scroll vertical tot în #calVertScroll, sticky e raportat la acesta. */
+#calCalendarRoot {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 0%;
+  overflow: hidden;
+}
+
+#calVertScroll {
+  box-sizing: border-box;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+#calVertScroll > .flex {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  width: 100%;
+  min-width: 0;
+  align-items: stretch;
+  box-sizing: border-box;
+}
+
+#calDateHeaderHScroll {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
+}
+
+/* Bară: search + luni; lipită la scroll în #calVertScroll. */
+.cal-sticky-header,
+.cal-date-header-sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.cal-date-header-sticky {
+  background: rgb(255 255 255 / 0.95);
+}
+
+#calGridHScroll {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-shrink: 0;
+  align-self: stretch;
+  overflow-x: auto;
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
+}
+
+#calVertScroll .cal-grid-row,
+#calVertScroll .cal-prop-row {
+  height: 60px;
+  min-height: 60px;
+  max-height: 60px;
+  box-sizing: border-box;
+}
