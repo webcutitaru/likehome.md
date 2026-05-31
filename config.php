@@ -9,6 +9,9 @@ if (!function_exists('lh_env')) {
     function lh_env(string $key, string $default = ''): string
     {
         $v = getenv($key);
+        if ($v === false && isset($_ENV[$key]) && is_string($_ENV[$key])) {
+            $v = $_ENV[$key];
+        }
         if ($v !== false && $v !== '') {
             return $v;
         }
@@ -53,7 +56,54 @@ if (!function_exists('lh_load_dotenv')) {
     }
 }
 
-lh_load_dotenv(__DIR__ . '/.env');
+/**
+ * Locate .env: LH_ENV_PATH (server) → project root → parent dir (e.g. /home/likehome/.env on cPanel).
+ */
+if (!function_exists('lh_find_env_file')) {
+    function lh_find_env_file(): ?string
+    {
+        $root = __DIR__;
+        $candidates = [];
+        $explicit = getenv('LH_ENV_PATH');
+        if (is_string($explicit) && $explicit !== '') {
+            $candidates[] = rtrim($explicit, '/');
+        }
+        $candidates[] = $root;
+        $candidates[] = dirname($root);
+
+        foreach ($candidates as $dir) {
+            if (!is_dir($dir)) {
+                continue;
+            }
+            $envFile = $dir . '/.env';
+            if (is_readable($envFile)) {
+                return $envFile;
+            }
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('lh_load_env')) {
+    function lh_load_env(): void
+    {
+        static $loaded = false;
+        if ($loaded) {
+            return;
+        }
+        $loaded = true;
+
+        $envFile = lh_find_env_file();
+        if ($envFile === null) {
+            return;
+        }
+
+        lh_load_dotenv($envFile);
+    }
+}
+
+lh_load_env();
 
 $lhVendorAutoload = __DIR__ . '/vendor/autoload.php';
 if (is_readable($lhVendorAutoload)) {
