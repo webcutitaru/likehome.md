@@ -428,7 +428,7 @@ $locationLine = $locationLineParts ? implode(' · ', $locationLineParts) : '';
 
 <div id="lh-pd-main-wrap" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-28 lg:pb-0">
 
-<a href="<?= htmlspecialchars(lh_public_url(), ENT_QUOTES, 'UTF-8') ?>" id="lh-pd-back-link" class="lg:hidden text-sm text-cta/80 hover:text-ink transition-colors mb-6 inline-block">← Înapoi</a>
+<a href="<?= htmlspecialchars(lh_locale_url(), ENT_QUOTES, 'UTF-8') ?>" id="lh-pd-back-link" class="lg:hidden text-sm text-cta/80 hover:text-ink transition-colors mb-6 inline-block">← <?= htmlspecialchars(__('booking.back'), ENT_QUOTES, 'UTF-8') ?></a>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-10 lg:items-start">
 
@@ -579,7 +579,7 @@ Fără imagini
 <?php if ($mapIframeSrc !== ''): ?>
 <div class="relative w-full max-w-full overflow-hidden rounded-2xl border border-black/10 bg-surface h-[220px] sm:h-[280px] md:h-[360px] lg:h-[400px]">
 <iframe
-  title="Hartă — <?= htmlspecialchars($lhPropTitleRaw, ENT_QUOTES, 'UTF-8') ?>"
+  title="<?= htmlspecialchars(__('booking.map_title', ['property' => $lhPropTitleRaw]), ENT_QUOTES, 'UTF-8') ?>"
   class="absolute inset-0 block h-full w-full border-0"
   src="<?= htmlspecialchars($mapIframeSrc, ENT_QUOTES, 'UTF-8') ?>"
   loading="lazy"
@@ -676,7 +676,7 @@ Fără imagini
 </div>
 <div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide"><?= htmlspecialchars(__('booking.confirm_name'), ENT_QUOTES, 'UTF-8') ?></dt><dd id="lh-confirm-name" class="font-medium text-ink break-words"></dd></div>
 <div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide"><?= htmlspecialchars(__('booking.confirm_phone'), ENT_QUOTES, 'UTF-8') ?></dt><dd id="lh-confirm-phone" class="font-medium text-ink"></dd></div>
-<div class="flex flex-col gap-0.5 pb-1"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide">Email</dt><dd id="lh-confirm-email" class="font-medium text-ink break-all"></dd></div>
+<div class="flex flex-col gap-0.5 pb-1"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide"><?= htmlspecialchars(__('booking.confirm_email'), ENT_QUOTES, 'UTF-8') ?></dt><dd id="lh-confirm-email" class="font-medium text-ink break-all"></dd></div>
 </dl>
 <div class="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
 <button type="button" id="lh-booking-confirm-back" class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-3.5 rounded-xl font-bold border-2 border-black/10 text-ink hover:bg-brand-50 transition-colors"><?= htmlspecialchars(__('booking.confirm_back'), ENT_QUOTES, 'UTF-8') ?></button>
@@ -754,7 +754,7 @@ $lhPdFpJs = match (lh_current_locale()) {
     'ru' => 'ru',
     default => 'ro',
 };
-if ($lhPdFpJs !== 'en'): ?>
+if ($lhPdFpJs === 'ro' || $lhPdFpJs === 'ru'): ?>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/<?= htmlspecialchars($lhPdFpJs, ENT_QUOTES, 'UTF-8') ?>.js"></script>
 <?php endif; ?>
 
@@ -965,6 +965,17 @@ function lhCurrencySuffix() {
     return String(c.suffix);
   }
   return ' MDL';
+}
+
+/** Aligned with Flatpickr altInput (localized month names via lhBookingFpLocale). */
+var lhBookingAltFormat = 'd M Y';
+
+function lhFormatCouponLine(code, discountEuro) {
+  var amt = discountEuro.toFixed(0) + lhCurrencySuffix();
+  if (typeof lhT === 'function') {
+    return lhT('booking.coupon_line', { code: String(code).toUpperCase(), amount: amt });
+  }
+  return '\u00ab' + String(code).toUpperCase() + '\u00bb: -' + amt;
 }
 
 var lhPricing = {
@@ -1388,12 +1399,7 @@ function lhApplyCouponLayerToTotals(pricingSync, cinYmd, coutYmd, nights) {
     }
     var cd = parseFloat(String(lhLastPricePreview.coupon_discount || '0'));
     if (cd > 0.499 && couponLineEl) {
-      couponLineEl.textContent =
-        'Cupon (' +
-        coup.toUpperCase() +
-        '): −' +
-        cd.toFixed(0) +
-        lhCurrencySuffix();
+      couponLineEl.textContent = lhFormatCouponLine(coup, cd);
       couponLineEl.classList.remove('hidden');
     } else if (couponLineEl) {
       couponLineEl.textContent = '';
@@ -1713,14 +1719,16 @@ function lhOpenBookingConfirmModal(payload) {
 
   document.getElementById('lh-confirm-property').textContent = propertyTitle;
   document.getElementById('lh-confirm-period').textContent =
-    fpCheckIn.formatDate(payload.dateFrom, 'd.m.Y') + ' → ' + fpCheckOut.formatDate(payload.dateTo, 'd.m.Y');
+    fpCheckIn.formatDate(payload.dateFrom, lhBookingAltFormat) +
+    ' → ' +
+    fpCheckOut.formatDate(payload.dateTo, lhBookingAltFormat);
   var gStr = String(payload.guests);
   var gDisp =
     gStr === '6'
-      ? '6+ ' + lhT('booking.guests_plural')
+      ? '6+ ' + (typeof lhT === 'function' ? lhT('booking.guests_plural') : 'guests')
       : gStr === '1'
-        ? '1 ' + lhT('booking.guest_singular')
-        : gStr + ' ' + lhT('booking.guests_plural');
+        ? '1 ' + (typeof lhT === 'function' ? lhT('booking.guest_singular') : 'guest')
+        : gStr + ' ' + (typeof lhT === 'function' ? lhT('booking.guests_plural') : 'guests');
   document.getElementById('lh-confirm-guests').textContent = gDisp;
   var breakWrap = document.getElementById('lh-confirm-price-break');
   var cBase = document.getElementById('lh-confirm-base-line');
@@ -2055,7 +2063,7 @@ fpCheckOut = flatpickr('#booking-check-out', {
   locale: lhBookingFpLocale,
   dateFormat: 'Y-m-d',
   altInput: true,
-  altFormat: 'd M Y',
+  altFormat: lhBookingAltFormat,
   minDate: (function () {
     if (!preCheckIn) return 'today';
     var d = new Date(preCheckIn + 'T12:00:00');
@@ -2090,7 +2098,7 @@ fpCheckIn = flatpickr('#booking-check-in', {
   locale: lhBookingFpLocale,
   dateFormat: 'Y-m-d',
   altInput: true,
-  altFormat: 'd M Y',
+  altFormat: lhBookingAltFormat,
   minDate: 'today',
   disableMobile: true,
   disable: [lhBookingCheckInDisableFn],
@@ -2287,12 +2295,7 @@ if (coupReserve !== '' && lhLastPricePreview) {
   if (!isNaN(tNv)) totalEuroRes = tNv;
   var cdNv = parseFloat(String(lhLastPricePreview.coupon_discount || 0));
   if (cdNv > 0.499) {
-    pricingCouponLineRes =
-      'Cupon (' +
-      coupReserve.toUpperCase() +
-      '): −' +
-      cdNv.toFixed(0) +
-      lhCurrencySuffix();
+    pricingCouponLineRes = lhFormatCouponLine(coupReserve, cdNv);
   }
 }
 

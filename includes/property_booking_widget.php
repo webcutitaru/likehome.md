@@ -16,7 +16,7 @@ $lh_date_hint_rest = $lh_min_stay === 1
 <div id="lh-booking-widget" class="bg-white border border-black/10 rounded-2xl p-6 sm:p-8">
 
 <div class="hidden" aria-hidden="true">
-<label for="bookingCompany">Company</label>
+<label for="bookingCompany" class="sr-only"><?= htmlspecialchars(__('booking.honeypot_company'), ENT_QUOTES, 'UTF-8') ?></label>
 <input type="text" id="bookingCompany" tabindex="-1" autocomplete="off" value="">
 </div>
 
@@ -56,9 +56,9 @@ $lh_date_hint_rest = $lh_min_stay === 1
 
 <select id="guests" class="w-full mb-2 bg-surface border border-black/10 rounded-xl p-3 text-ink focus:outline-none focus:ring-2 focus:ring-cta/20 focus:border-cta">
 <?php for ($g = 1; $g <= 5; $g++): ?>
-  <option value="<?= $g ?>"><?= htmlspecialchars(__('search.guest_option', ['n' => (string) $g, 'label' => $g === 1 ? __('booking.guest_one') : __('booking.guest_many')]), ENT_QUOTES, 'UTF-8') ?></option>
+  <option value="<?= $g ?>"><?= htmlspecialchars($g === 1 ? __('booking.guest_one') : __('booking.guest_many', ['n' => (string) $g]), ENT_QUOTES, 'UTF-8') ?></option>
 <?php endfor; ?>
-  <option value="6"><?= htmlspecialchars(__('search.guest_option', ['n' => '6', 'label' => __('booking.guest_six_plus')]), ENT_QUOTES, 'UTF-8') ?></option>
+  <option value="6"><?= htmlspecialchars(__('booking.guest_six_plus'), ENT_QUOTES, 'UTF-8') ?></option>
 </select>
 
 <label for="booking-coupon-code" class="block text-xs font-semibold text-blue-grey uppercase tracking-wide mb-1"><?= htmlspecialchars(__('booking.coupon_optional'), ENT_QUOTES, 'UTF-8') ?></label>
