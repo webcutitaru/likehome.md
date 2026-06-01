@@ -124,7 +124,7 @@ if ($errorLogPath !== '') {
 }
 
 $dbHost = lh_env('DB_HOST', $isProduction ? '' : 'localhost');
-$dbName = lh_env('DB_NAME', $isProduction ? '' : 'likehome2_db');
+$dbName = lh_env('DB_NAME', $isProduction ? '' : 'likehome_db');
 $dbUser = lh_env('DB_USER', $isProduction ? '' : 'root');
 $dbPass = lh_env('DB_PASS');
 if ($dbPass === '') {
@@ -181,7 +181,7 @@ require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/includes/admin_activity_log.php';
 require_once __DIR__ . '/includes/mysqli_stmt_compat.php';
 
-$siteBaseRaw = lh_env('SITE_BASE_PATH', '/likehome2');
+$siteBaseRaw = lh_env('SITE_BASE_PATH', '/likehome.md');
 if ($siteBaseRaw === '' || $siteBaseRaw === '/') {
     define('SITE_BASE_PATH', '');
 } else {
@@ -204,6 +204,11 @@ if (!function_exists('lh_public_url')) {
     }
 }
 
+require_once __DIR__ . '/includes/locale.php';
+require_once __DIR__ . '/includes/location_labels.php';
+require_once __DIR__ . '/includes/property_i18n.php';
+require_once __DIR__ . '/includes/booking_locale.php';
+require_once __DIR__ . '/includes/page_i18n.php';
 require_once __DIR__ . '/includes/seo.php';
 
 require_once __DIR__ . '/includes/upload_image.php';

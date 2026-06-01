@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/ical_importer.php';
 require_once __DIR__ . '/booking_pricing.php';
+require_once __DIR__ . '/lh_property_translations_save.php';
 
 function lh_edit_property_save_debug_timing_enabled(): bool
 {
@@ -199,6 +200,11 @@ function lh_edit_property_save_from_post(mysqli $conn, PDO $pdo, int $id, array 
     }
 
     lh_admin_log_activity($conn, 'property_update', 'property', $id, $updDetails);
+
+    $trErr = lh_property_translations_save_from_post($pdo, $id, $post);
+    if ($trErr !== null) {
+        return ['ok' => false, 'error' => $trErr];
+    }
 
     if ($dbgTime) {
         lh_edit_property_save_timing_tick($timeMark, $timings, 'activity_log_ms');

@@ -41,7 +41,7 @@ $telegram_bot_token = defined('TELEGRAM_BOT_TOKEN') ? trim((string) TELEGRAM_BOT
 $telegram_chat_id = defined('TELEGRAM_CHAT_ID') ? trim((string) TELEGRAM_CHAT_ID) : '';
 
 $sql = <<<'SQL'
-SELECT b.id AS booking_id, b.guest_name, b.guest_email, b.guest_phone, b.check_in, b.check_out, b.guests, b.total_price,
+SELECT b.id AS booking_id, b.guest_name, b.guest_email, b.guest_phone, b.check_in, b.check_out, b.guests, b.total_price, b.locale,
        p.id AS property_id, p.title AS property_title, p.check_in_start, p.check_in_end, p.check_out_end,
        p.address, p.city, p.district, p.floor,
        p.pre_checkin_email_message

@@ -3,6 +3,12 @@ include('../config.php');
 require_once('../includes/ical_importer.php');
 require_once __DIR__ . '/../includes/booking_pricing.php';
 require_once __DIR__ . '/../includes/lh_add_property_core.php';
+
+$lhPropertyTranslations = [
+    'en' => ['title' => '', 'slug' => '', 'description_long' => ''],
+    'ru' => ['title' => '', 'slug' => '', 'description_long' => ''],
+];
+
 include('includes/header.php');
 
 $lhCurrencyCode = lh_currency_code();
@@ -318,6 +324,8 @@ $categories = lh_property_amenity_categories();
             </h3>
             <textarea name="description_long" rows="8" placeholder="Scrie o descriere atractivă pentru clienți..." class="w-full p-6 bg-slate-50 border-none rounded-[2rem] focus:ring-2 focus:ring-cta/30 outline-none leading-relaxed text-slate-600 font-medium"></textarea>
         </div>
+
+        <?php require __DIR__ . '/includes/property_translation_fields.php'; ?>
 
         <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
             <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2 uppercase tracking-tighter">

@@ -16,6 +16,7 @@ function lh_add_property_create_from_post(mysqli $conn, array $post): array
 {
     require_once __DIR__ . '/ical_importer.php';
     require_once __DIR__ . '/booking_pricing.php';
+require_once __DIR__ . '/lh_property_translations_save.php';
 
     $parsedPeriodsPost = lh_pricing_periods_from_post($post);
     if ($parsedPeriodsPost['error'] !== null) {
@@ -130,6 +131,15 @@ function lh_add_property_create_from_post(mysqli $conn, array $post): array
         );
     } catch (Throwable $e) {
         error_log('add-property pricing periods/discounts: ' . $e->getMessage());
+    }
+
+    try {
+        $trErr = lh_property_translations_save_from_post(getPDO(), $new_property_id, $post);
+        if ($trErr !== null) {
+            return ['ok' => false, 'error' => $trErr];
+        }
+    } catch (Throwable $e) {
+        error_log('add-property translations: ' . $e->getMessage());
     }
 
     return ['ok' => true, 'property_id' => $new_property_id];

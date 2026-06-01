@@ -25,6 +25,7 @@ $lh_sector_options         = [];
 
 $properties = [];
 $all_props  = [];
+$pdo = null;
 try {
     $pdo    = getPDO();
 
@@ -69,31 +70,48 @@ try {
     $lh_sector_options = [];
 }
 
+$all_props = lh_property_apply_locale_list($all_props, $pdo ?? null);
+
 if ($lh_area_district !== '') {
-    $pageTitle = 'Proprietăți în ' . $lh_area_district . ' — Like HOME';
-    $catalog_hero_title = 'Proprietăți în zonă';
-    $catalog_hero_subtitle = $lh_area_district;
-    $pageDescription = 'Catalog Like HOME în zona ' . $lh_area_district
-        . ': apartamente și case de închiriat pe termen scurt. Alege perioada și numărul de persoane, apoi rezervă direct.';
-    $canonicalUrl = lh_absolute_url('properties.php?' . http_build_query(['district' => $lh_area_district]));
+    $pageTitle = __('page.properties.title_district', ['area' => lh_location_label($lh_area_district)]);
+    $catalog_hero_title = __('page.properties.hero_area');
+    $catalog_hero_subtitle = lh_location_label($lh_area_district);
+    $pageDescription = __('page.properties.desc_district', ['area' => lh_location_label($lh_area_district)]);
+    $canonicalUrl = lh_absolute_locale_url('properties.php?' . http_build_query(['district' => $lh_area_district]));
 } elseif ($lh_area_city !== '') {
-    $pageTitle = 'Proprietăți în ' . $lh_area_city . ' — Like HOME';
-    $catalog_hero_title = 'Proprietăți în zonă';
-    $catalog_hero_subtitle = $lh_area_city;
-    $pageDescription = 'Proprietăți de închiriat în ' . $lh_area_city
-        . ', listate pe Like HOME. Compară locațiile și verifică disponibilitatea pentru sejurul tău.';
-    $canonicalUrl = lh_absolute_url('properties.php?' . http_build_query(['city' => $lh_area_city]));
+    $pageTitle = __('page.properties.title_city', ['city' => lh_location_label($lh_area_city)]);
+    $catalog_hero_title = __('page.properties.hero_area');
+    $catalog_hero_subtitle = lh_location_label($lh_area_city);
+    $pageDescription = __('page.properties.desc_city', ['city' => lh_location_label($lh_area_city)]);
+    $canonicalUrl = lh_absolute_locale_url('properties.php?' . http_build_query(['city' => $lh_area_city]));
 } else {
-    $pageTitle = 'Toate proprietățile — Like HOME';
-    $catalog_hero_title = 'Toate proprietățile';
+    $pageTitle = __('page.properties.title_default');
+    $catalog_hero_title = __('page.properties.hero_default');
     $catalog_hero_subtitle = '';
-    $pageDescription = 'Toate proprietățile active Like HOME: închirieri pe termen scurt în Moldova. Filtrează după sector sau dată și rezervă direct.';
-    $canonicalUrl = lh_absolute_url('properties.php');
+    $pageDescription = __('page.properties.desc_default');
+    $canonicalUrl = lh_absolute_locale_url('properties.php');
 }
 
 $getCheckIn  = $_GET['check_in'] ?? '';
 $getCheckOut = $_GET['check_out'] ?? '';
 $getGuests   = $_GET['guests'] ?? '';
+
+$lh_prop_count = count($all_props);
+$lh_prop_count_label = $lh_prop_count === 1
+    ? '1 ' . __('page.properties.count_one')
+    : __('page.properties.count_many', ['n' => (string) $lh_prop_count]);
+$lh_prop_filter_hint = __('page.properties.filter_hint');
+if ($lh_area_district !== '' || $lh_area_city !== '') {
+    $catalog_hero_desc = __('page.properties.hero_in_area', [
+        'count' => $lh_prop_count_label,
+        'hint' => $lh_prop_filter_hint,
+    ]);
+} else {
+    $catalog_hero_desc = __('page.properties.hero_browse', [
+        'count' => $lh_prop_count_label,
+        'hint' => $lh_prop_filter_hint,
+    ]);
+}
 ?>
 <?php include __DIR__ . '/includes/header.php'; ?>
 <?php require_once __DIR__ . '/components/property_card.php'; ?>
@@ -110,11 +128,7 @@ $getGuests   = $_GET['guests'] ?? '';
     </p>
     <?php endif; ?>
     <p class="text-white/70 text-base md:text-lg max-w-2xl mx-auto">
-      <?php if ($lh_area_district !== '' || $lh_area_city !== ''): ?>
-        Proprietăți în această zonă (<?= count($all_props) ?> <?= count($all_props) === 1 ? 'proprietate' : 'proprietăți' ?>). Poți filtra după date și număr de persoane mai jos.
-      <?php else: ?>
-        Răsfoiește catalogul complet (<?= count($all_props) ?> <?= count($all_props) === 1 ? 'proprietate' : 'proprietăți' ?>). Poți filtra după date și număr de persoane mai jos.
-      <?php endif; ?>
+      <?= htmlspecialchars($catalog_hero_desc, ENT_QUOTES, 'UTF-8') ?>
     </p>
   </div>
   <div class="relative z-10 flex justify-center px-3 sm:px-4 min-w-0 pb-8 md:pb-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:translate-y-1/2 lg:pb-0">
@@ -128,7 +142,7 @@ $getGuests   = $_GET['guests'] ?? '';
 
 <div id="search-results-section" class="max-w-6xl mx-auto px-4 mt-0 pt-0 pb-0 scroll-mt-28 md:scroll-mt-24">
   <div id="results-header" class="hidden mt-6 mb-6">
-    <h2 class="text-xl font-semibold text-ink text-center">Proprietăți disponibile</h2>
+    <h2 class="text-xl font-semibold text-ink text-center"><?= htmlspecialchars(__('search.available_properties'), ENT_QUOTES, 'UTF-8') ?></h2>
   </div>
   <div
     id="results-container"
@@ -144,7 +158,7 @@ $getGuests   = $_GET['guests'] ?? '';
             echo render_property_card($property, $getCheckIn, $getCheckOut, $getGuests);
         }
     } else {
-        echo '<p class="col-span-full text-blue-grey">Nu există proprietăți disponibile momentan.</p>';
+        echo '<p class="col-span-full text-blue-grey">' . htmlspecialchars(__('page.index.empty'), ENT_QUOTES, 'UTF-8') . '</p>';
     }
     ?>
   </div>

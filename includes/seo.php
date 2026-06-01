@@ -67,10 +67,14 @@ if (!function_exists('lh_seo_request_uri_path')) {
 
 if (!function_exists('lh_seo_fallback_canonical')) {
     /**
-     * Best-effort canonical from current request (includes query string).
+     * Best-effort canonical from current request (locale-aware path).
      */
     function lh_seo_fallback_canonical(): string
     {
+        if (function_exists('lh_locale_current_request_path') && !lh_is_locale_exempt_script()) {
+            return lh_absolute_locale_url(lh_locale_current_request_path());
+        }
+
         $path = lh_seo_request_uri_path();
 
         return lh_public_site_origin() . $path;

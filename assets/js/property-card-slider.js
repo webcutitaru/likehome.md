@@ -57,9 +57,9 @@
     var nav = document.createElement("div");
     nav.className = "flex shrink-0 items-center gap-3";
     nav.innerHTML =
-      '<button type="button" class="lh-property-card-prev flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/40 bg-white/95 text-ink shadow-md shadow-black/15 transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="Imaginea anterioară">' +
+      '<button type="button" class="lh-property-card-prev flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/40 bg-white/95 text-ink shadow-md shadow-black/15 transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="' + (typeof lhT === "function" ? lhT("slider.prev") : "Previous") + '">' +
       '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>' +
-      '<button type="button" class="lh-property-card-next flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/40 bg-white/95 text-ink shadow-md shadow-black/15 transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="Imaginea următoare">' +
+      '<button type="button" class="lh-property-card-next flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/40 bg-white/95 text-ink shadow-md shadow-black/15 transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="' + (typeof lhT === "function" ? lhT("slider.next") : "Next") + '">' +
       '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>';
 
     bar.appendChild(dots);
@@ -87,13 +87,13 @@
       dot.setAttribute("role", "tab");
       dot.setAttribute(
         "aria-label",
-        "Poziție în galerie: segment " +
-          (d + 1) +
-          " din " +
-          FIXED_DOT_COUNT +
-          " (" +
-          n +
-          " imagini)",
+        typeof lhT === "function"
+          ? lhT("slider.dot_aria", {
+              segment: d + 1,
+              segments: FIXED_DOT_COUNT,
+              images: n,
+            })
+          : "Segment " + (d + 1) + " / " + FIXED_DOT_COUNT,
       );
       dot.setAttribute("aria-selected", isActive ? "true" : "false");
       dotsContainer.appendChild(dot);

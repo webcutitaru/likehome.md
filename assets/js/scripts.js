@@ -174,7 +174,7 @@
 
     if (onHome) {
       if (homePropertiesHeading) {
-        homePropertiesHeading.textContent = "Proprietăți disponibile";
+        homePropertiesHeading.textContent = typeof lhT === "function" ? lhT("search.available_properties") : "";
         homePropertiesHeading.classList.remove("hidden");
       }
       if (homeCtaWrap) {
@@ -219,7 +219,7 @@
     currentBlockedRanges = blockedRanges || [];
 
     const sharedConfig = {
-      locale: "ro", // localizare română (fișier ro.js încărcat în footer)
+      locale: window.lhFlatpickrLocale || "ro",
       dateFormat: "Y-m-d", // format trimis în backend
       altInput: true, // câmp vizual separat
       altFormat: "d M Y", // format afișat utilizatorului
@@ -316,7 +316,7 @@
   // ── Actualizare buton ─────────────────────────────────────────────
   function updateButton() {
     if (!propertySelect) {
-      btnText.textContent = "Caută";
+      btnText.textContent = typeof lhT === "function" ? lhT("search.search") : "Search";
       searchBtn.dataset.mode = "search";
       btnIconSearch.classList.remove("hidden");
       btnIconReserve.classList.add("hidden");
@@ -324,12 +324,12 @@
     }
     const val = propertySelect.value;
     if (val === "all") {
-      btnText.textContent = "Caută";
+      btnText.textContent = typeof lhT === "function" ? lhT("search.search") : "Search";
       searchBtn.dataset.mode = "search";
       btnIconSearch.classList.remove("hidden");
       btnIconReserve.classList.add("hidden");
     } else {
-      btnText.textContent = "Rezervă acum";
+      btnText.textContent = typeof lhT === "function" ? lhT("booking.book_now") : "Book";
       searchBtn.dataset.mode = "reserve";
       btnIconSearch.classList.add("hidden");
       btnIconReserve.classList.remove("hidden");
@@ -378,8 +378,9 @@
 
     if (lhSearchDatesInvalidRange(checkIn, checkOut)) {
       if (dateErr) {
-        dateErr.textContent =
-          "Check-out trebuie să fie după check-in (minim o noapte).";
+        dateErr.textContent = typeof lhT === "function"
+          ? lhT("booking.checkout_after_checkin")
+          : "Check-out must be after check-in (minimum 1 night).";
         dateErr.classList.remove("hidden");
       }
       return;
@@ -399,7 +400,7 @@
       if (checkOut) params.set("check_out", checkOut);
       if (guests) params.set("guests", guests);
 
-      window.location.href = "property-details.php?" + params.toString();
+      window.location.href = (typeof lhLocaleUrl === "function" ? lhLocaleUrl("property-details.php") : "property-details.php") + "?" + params.toString();
       return;
     }
 
@@ -427,6 +428,9 @@
     formData.append("property_id", propertyId);
     formData.append("check_in", checkIn);
     formData.append("check_out", checkOut);
+    if (window.lhLocale) {
+      formData.append("locale", window.lhLocale);
+    }
     if (guests !== "") {
       formData.append("guests", guests);
     }
@@ -453,7 +457,7 @@
       })
       .catch(function (err) {
         applySearchResults(
-          '<p class="col-span-full text-center text-red-500 py-8">A apărut o eroare. Te rugăm încearcă din nou.</p>',
+          '<p class="col-span-full text-center text-red-500 py-8">' + (typeof lhT === "function" ? lhT("search.error_generic") : "") + "</p>",
         );
         console.error("AJAX error (filter_properties):", err);
       })

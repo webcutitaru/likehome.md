@@ -90,11 +90,12 @@ function lh_checkin_reminder_send_for_booking_row(
 
     $guestName = (string) $row['guest_name'];
     $guestEmail = (string) $row['guest_email'];
-    $propTitle = (string) ($row['property_title'] ?? 'Proprietate');
+    $reminderLocale = (string) ($row['locale'] ?? lh_default_locale());
+    $propTitle = (string) ($row['property_title'] ?? lh_translate('card.fallback_title', [], $reminderLocale));
 
     $clientBody = lh_build_guest_checkin_reminder_body($row);
 
-    $clientSubject = 'Înainte de sosire — ' . $propTitle;
+    $clientSubject = lh_translate('email.reminder.subject', ['property' => $propTitle], $reminderLocale);
 
     if (!filter_var($guestEmail, FILTER_VALIDATE_EMAIL)) {
         error_log("{$logCtx}: invalid guest email booking #{$bookingId}");

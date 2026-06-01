@@ -6,7 +6,8 @@
 
 DEPLOYPATH="${DEPLOYPATH:-/home/CPANEL_USER/public_html/}"
 HTACCESS_PATHS="cron/.htaccess"
-DEPLOY_DIRS="admin ajax assets components cron ical includes vendor"
+DEPLOY_DIRS="admin ajax assets components cron ical includes lang en ru vendor"
+DEPLOY_FILES=".htaccess"
 
 chmod 755 "$DEPLOYPATH" 2>/dev/null || true
 
@@ -35,7 +36,7 @@ for f in ./*.php; do
   /bin/cp -f "$f" "$DEPLOYPATH" 2>/dev/null || true
 done
 
-for f in robots.txt composer.json composer.lock; do
+for f in robots.txt composer.json composer.lock $DEPLOY_FILES; do
   if [ -f "$f" ]; then
     /bin/cp -f "$f" "$DEPLOYPATH" 2>/dev/null || true
   fi

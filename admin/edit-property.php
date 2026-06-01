@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/ical_importer.php';
 require_once __DIR__ . '/../includes/booking_pricing.php';
 require_once __DIR__ . '/../includes/lh_edit_property_save_core.php';
 require_once __DIR__ . '/../includes/lh_add_property_core.php';
+require_once __DIR__ . '/../includes/lh_property_translations_save.php';
 
 $lhCurrencyCode = lh_currency_code();
 
@@ -105,6 +106,8 @@ $data = mysqli_fetch_assoc($res);
 if (!$data) {
     die('Proprietatea nu există.');
 }
+
+$lhPropertyTranslations = lh_property_translations_load(getPDO(), $id);
 
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
@@ -618,6 +621,8 @@ include 'includes/header.php';
             </h3>
             <textarea name="description_long" rows="8" placeholder="Scrie o descriere atractivă pentru clienți..." class="w-full p-6 bg-slate-50 border-none rounded-[2rem] focus:ring-2 focus:ring-cta/30 outline-none leading-relaxed text-slate-600 font-medium"><?php echo htmlspecialchars($data['description_long'] ?? ''); ?></textarea>
         </div>
+
+        <?php require __DIR__ . '/includes/property_translation_fields.php'; ?>
 
         <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
             <h3 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2 uppercase tracking-tighter">

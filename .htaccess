@@ -1,0 +1,19 @@
+# Like HOME — locale URL prefixes (/en/, /ru/).
+#
+# MAMP: enable mod_rewrite (Apache module) for rewrite rules below.
+# Fallback without mod_rewrite: physical stubs in en/*.php and ru/*.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    RewriteRule ^(en|ru)/?$ index.php [E=LH_LANG:$1,L]
+
+    RewriteRule ^(en|ru)/(.*)$ $2 [E=LH_LANG:$1,L,QSA]
+</IfModule>
+
+# /en or /ru without index.php in URL → serve locale index
+DirectoryIndex index.php

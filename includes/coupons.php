@@ -107,6 +107,22 @@ if (!function_exists('lh_coupon_applies_to_property')) {
     }
 }
 
+if (!function_exists('lh_coupon_translate_error')) {
+    function lh_coupon_translate_error(string $error, ?string $locale = null): string
+    {
+        $map = [
+            'Codul promoțional nu este valid sau a expirat.' => 'coupon.invalid_expired',
+            'Codul promoțional nu este valabil pentru această perioadă.' => 'coupon.invalid_period',
+            'Codul promoțional nu este valabil pentru această proprietate.' => 'coupon.invalid_property',
+            'Codul promoțional a fost deja folosit de numărul maxim de ori.' => 'coupon.max_redemptions',
+            'Codul promoțional nu poate fi aplicat pentru această rezervare.' => 'coupon.cannot_apply',
+        ];
+        $key = $map[$error] ?? null;
+
+        return $key !== null ? lh_translate($key, [], $locale) : $error;
+    }
+}
+
 if (!function_exists('lh_coupon_resolve_for_booking')) {
     /**
      * Validate coupon inside an open DB transaction when $forUpdate is true (max redemptions + row lock).

@@ -10,8 +10,14 @@ require_once __DIR__ . '/../includes/booking_pricing.php';
 require_once __DIR__ . '/../includes/coupons.php';
 require_once __DIR__ . '/../includes/rate_limit.php';
 
-function booking_preview_fail(string $message, int $code = 400): void
+$previewLocale = lh_resolve_request_locale();
+
+function booking_preview_fail(string $message, int $code = 400, array $replace = []): void
 {
+    global $previewLocale;
+    if (str_starts_with($message, 'api.')) {
+        $message = lh_translate($message, $replace, $previewLocale);
+    }
     http_response_code($code);
     echo json_encode(['success' => false, 'message' => $message], JSON_UNESCAPED_UNICODE);
 
@@ -19,18 +25,18 @@ function booking_preview_fail(string $message, int $code = 400): void
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    booking_preview_fail('Metodă invalidă.', 405);
+    booking_preview_fail('api.method_invalid', 405);
 }
 
 if (!lh_csrf_verify_post()) {
-    booking_preview_fail('Sesiune invalidă. Reîncarcă pagina.', 403);
+    booking_preview_fail('api.session_invalid', 403);
 }
 
 $clientIp = $_SERVER['REMOTE_ADDR'] ?? '0';
 $rateMax = (int) lh_env('BOOKING_PRICE_PREVIEW_RATE_LIMIT_MAX', '40');
 $rateWindow = (int) lh_env('BOOKING_PRICE_PREVIEW_RATE_LIMIT_WINDOW', '300');
 if ($rateMax > 0 && $rateWindow > 0 && lh_rate_limit_exceeded('booking_preview:' . $clientIp, $rateMax, $rateWindow)) {
-    booking_preview_fail('Prea multe cereri. Încearcă din nou în câteva minute.', 429);
+    booking_preview_fail('api.rate_limit_preview', 429);
 }
 
 $property_id = filter_input(INPUT_POST, 'property_id', FILTER_VALIDATE_INT);
@@ -40,22 +46,22 @@ $guests = filter_input(INPUT_POST, 'guests', FILTER_VALIDATE_INT);
 $coupon_raw = trim((string) ($_POST['coupon_code'] ?? ''));
 
 if (!$property_id) {
-    booking_preview_fail('Proprietate invalidă.');
+    booking_preview_fail('api.property_invalid');
 }
 if (!$guests || $guests < 1) {
-    booking_preview_fail('Număr invalid de oaspeți.');
+    booking_preview_fail('api.guests_invalid');
 }
 
 $checkInDt = DateTime::createFromFormat('Y-m-d', $check_in);
 $checkOutDt = DateTime::createFromFormat('Y-m-d', $check_out);
 if (!$checkInDt || $checkInDt->format('Y-m-d') !== $check_in) {
-    booking_preview_fail('Check-in invalid.');
+    booking_preview_fail('api.checkin_invalid');
 }
 if (!$checkOutDt || $checkOutDt->format('Y-m-d') !== $check_out) {
-    booking_preview_fail('Check-out invalid.');
+    booking_preview_fail('api.checkout_invalid');
 }
 if ($checkOutDt <= $checkInDt) {
-    booking_preview_fail('Selectează un interval cu cel puțin o noapte.');
+    booking_preview_fail('api.dates_min_one_night');
 }
 
 try {
@@ -64,17 +70,17 @@ try {
     $stmt->execute([(int) $property_id]);
     $property = $stmt->fetch();
     if (!$property) {
-        booking_preview_fail('Proprietate indisponibilă.', 404);
+        booking_preview_fail('api.property_unavailable', 404);
     }
 
     if (!empty($property['sleep_capacity']) && $guests > (int) $property['sleep_capacity']) {
-        booking_preview_fail('Numărul de oaspeți depășește capacitatea.');
+        booking_preview_fail('api.guests_over_capacity');
     }
 
     $effMinStay = lh_booking_effective_min_stay($property, $check_in, $check_out);
     $nightsForMin = (int) $checkOutDt->diff($checkInDt)->days;
     if ($nightsForMin < $effMinStay) {
-        booking_preview_fail('Sejur minim: ' . $effMinStay . ' nopți.');
+        booking_preview_fail('api.min_stay', 400, ['n' => (string) $effMinStay]);
     }
 
     $pricing = lh_booking_stay_total($property, $check_in, $check_out, (int) $guests);
@@ -91,7 +97,7 @@ try {
             false
         );
         if ($r['error'] !== null) {
-            $coupon_error = $r['error'];
+            $coupon_error = lh_coupon_translate_error((string) $r['error'], $previewLocale);
         } else {
             $coupon_discount = (float) $r['discount'];
         }
@@ -112,5 +118,5 @@ try {
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     error_log('booking_price_preview error: ' . $e->getMessage());
-    booking_preview_fail('Eroare la calcul. Încearcă din nou.', 500);
+    booking_preview_fail('api.calculation_error', 500);
 }

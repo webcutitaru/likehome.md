@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-$lhCookiePrivacyUrl = lh_public_url('privacy.php');
+$lhCookiePrivacyUrl = lh_locale_url('privacy.php');
 ?>
 <div
   id="lh-cookie-banner"
@@ -14,20 +14,20 @@ $lhCookiePrivacyUrl = lh_public_url('privacy.php');
   data-privacy-url="<?= htmlspecialchars($lhCookiePrivacyUrl, ENT_QUOTES, 'UTF-8') ?>"
 >
   <div class="pointer-events-auto max-w-4xl mx-auto rounded-2xl border border-black/10 bg-white/95 backdrop-blur-md shadow-2xl shadow-black/20 text-ink px-5 py-5 sm:px-7 sm:py-6">
-    <h2 id="lh-cookie-banner-title" class="text-base sm:text-lg font-bold text-ink tracking-tight">Cookie-uri și date personale</h2>
+    <h2 id="lh-cookie-banner-title" class="text-base sm:text-lg font-bold text-ink tracking-tight"><?= htmlspecialchars(__('cookie.title'), ENT_QUOTES, 'UTF-8') ?></h2>
     <p id="lh-cookie-banner-desc" class="mt-2 text-sm text-blue-grey leading-relaxed">
-      Folosim cookie-uri strict necesare pentru funcționarea site-ului. Cu acordul tău, putem folosi și cookie-uri pentru analiză și pentru publicitate personalizată.
-      <a href="<?= htmlspecialchars($lhCookiePrivacyUrl, ENT_QUOTES, 'UTF-8') ?>" class="text-ink font-semibold underline decoration-black/20 underline-offset-2 hover:decoration-ink">Politica de confidențialitate</a>
+      <?= htmlspecialchars(__('cookie.description'), ENT_QUOTES, 'UTF-8') ?>
+      <a href="<?= htmlspecialchars($lhCookiePrivacyUrl, ENT_QUOTES, 'UTF-8') ?>" class="text-ink font-semibold underline decoration-black/20 underline-offset-2 hover:decoration-ink"><?= htmlspecialchars(__('cookie.privacy_link'), ENT_QUOTES, 'UTF-8') ?></a>
     </p>
     <div class="mt-5 flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
       <button type="button" id="lh-cookie-reject" class="order-2 sm:order-1 px-4 py-2.5 rounded-xl text-sm font-semibold border border-black/15 bg-white text-ink hover:bg-black/[0.03] transition-colors">
-        Doar necesare
+        <?= htmlspecialchars(__('cookie.reject'), ENT_QUOTES, 'UTF-8') ?>
       </button>
       <button type="button" id="lh-cookie-customize" class="order-3 sm:order-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-black/15 bg-white text-ink hover:bg-black/[0.03] transition-colors">
-        Personalizează
+        <?= htmlspecialchars(__('cookie.settings'), ENT_QUOTES, 'UTF-8') ?>
       </button>
       <button type="button" id="lh-cookie-accept-all" class="order-1 sm:order-3 sm:ml-auto px-5 py-2.5 rounded-xl text-sm font-semibold bg-cta text-white shadow-md shadow-black/10 hover:brightness-110 transition-all">
-        Acceptă tot
+        <?= htmlspecialchars(__('cookie.accept'), ENT_QUOTES, 'UTF-8') ?>
       </button>
     </div>
   </div>
@@ -41,25 +41,25 @@ $lhCookiePrivacyUrl = lh_public_url('privacy.php');
   aria-modal="true"
   aria-labelledby="lh-cookie-modal-title"
 >
-  <h2 id="lh-cookie-modal-title" class="text-lg font-bold text-ink">Preferințe cookie-uri</h2>
+  <h2 id="lh-cookie-modal-title" class="text-lg font-bold text-ink"><?= htmlspecialchars(__('cookie.modal_title'), ENT_QUOTES, 'UTF-8') ?></h2>
   <p class="mt-2 text-sm text-blue-grey leading-relaxed">
-    Alege categoriile pe care le accepți. Necesarele sunt întotdeauna active.
+    <?= htmlspecialchars(__('cookie.modal_intro'), ENT_QUOTES, 'UTF-8') ?>
   </p>
   <ul class="mt-6 space-y-5">
     <li class="rounded-xl border border-black/[0.08] bg-black/[0.02] p-4">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <span class="font-semibold text-ink text-sm">Strict necesare</span>
-          <p class="text-xs text-blue-grey mt-1 leading-relaxed">Sesiune, securitate. Nu pot fi dezactivate din acest panou.</p>
+          <span class="font-semibold text-ink text-sm"><?= htmlspecialchars(__('cookie.category_necessary'), ENT_QUOTES, 'UTF-8') ?></span>
+          <p class="text-xs text-blue-grey mt-1 leading-relaxed"><?= htmlspecialchars(__('cookie.category_necessary_desc'), ENT_QUOTES, 'UTF-8') ?></p>
         </div>
-        <span class="text-xs font-semibold text-blue-grey shrink-0">Activ</span>
+        <span class="text-xs font-semibold text-blue-grey shrink-0"><?= htmlspecialchars(__('cookie.category_active'), ENT_QUOTES, 'UTF-8') ?></span>
       </div>
     </li>
     <li class="rounded-xl border border-black/[0.08] p-4">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <label for="lh-cookie-toggle-analytics" class="font-semibold text-ink text-sm cursor-pointer">Analitică</label>
-          <p class="text-xs text-blue-grey mt-1 leading-relaxed">Statistici anonimizate despre utilizarea site-ului.</p>
+          <label for="lh-cookie-toggle-analytics" class="font-semibold text-ink text-sm cursor-pointer"><?= htmlspecialchars(__('cookie.category_analytics'), ENT_QUOTES, 'UTF-8') ?></label>
+          <p class="text-xs text-blue-grey mt-1 leading-relaxed"><?= htmlspecialchars(__('cookie.category_analytics_desc'), ENT_QUOTES, 'UTF-8') ?></p>
         </div>
         <input type="checkbox" id="lh-cookie-toggle-analytics" class="mt-1 h-4 w-4 rounded border-black/20 text-cta focus:ring-cta" />
       </div>
@@ -67,8 +67,8 @@ $lhCookiePrivacyUrl = lh_public_url('privacy.php');
     <li class="rounded-xl border border-black/[0.08] p-4">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <label for="lh-cookie-toggle-marketing" class="font-semibold text-ink text-sm cursor-pointer">Publicitate</label>
-          <p class="text-xs text-blue-grey mt-1 leading-relaxed">Reclame măsurate și personalizate (ex. Google Ads, rețele sociale).</p>
+          <label for="lh-cookie-toggle-marketing" class="font-semibold text-ink text-sm cursor-pointer"><?= htmlspecialchars(__('cookie.category_marketing'), ENT_QUOTES, 'UTF-8') ?></label>
+          <p class="text-xs text-blue-grey mt-1 leading-relaxed"><?= htmlspecialchars(__('cookie.category_marketing_desc'), ENT_QUOTES, 'UTF-8') ?></p>
         </div>
         <input type="checkbox" id="lh-cookie-toggle-marketing" class="mt-1 h-4 w-4 rounded border-black/20 text-cta focus:ring-cta" />
       </div>
@@ -76,10 +76,10 @@ $lhCookiePrivacyUrl = lh_public_url('privacy.php');
   </ul>
   <div class="mt-6 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
     <button type="button" id="lh-cookie-modal-cancel" class="px-4 py-2.5 rounded-xl text-sm font-semibold border border-black/15 text-ink hover:bg-black/[0.03]">
-      Anulează
+      <?= htmlspecialchars(__('cookie.modal_cancel'), ENT_QUOTES, 'UTF-8') ?>
     </button>
     <button type="button" id="lh-cookie-modal-save" class="px-5 py-2.5 rounded-xl text-sm font-semibold bg-cta text-white hover:brightness-110">
-      Salvează preferințele
+      <?= htmlspecialchars(__('cookie.modal_save'), ENT_QUOTES, 'UTF-8') ?>
     </button>
   </div>
 </div>

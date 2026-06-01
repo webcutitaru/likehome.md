@@ -69,7 +69,7 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
     <!-- 0. SECTOR (catalog) -->
     <div class="flex-1 min-w-0 lg:max-w-[14rem] lg:shrink-0">
       <div id="lh-search-sector-label" class="block text-xs font-semibold text-blue-grey uppercase tracking-wide mb-1">
-        Sector
+        <?= htmlspecialchars(__('search.sector'), ENT_QUOTES, 'UTF-8') ?>
       </div>
       <div class="relative">
         <select
@@ -78,13 +78,13 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
           aria-labelledby="lh-search-sector-label"
           class="w-full min-h-[3rem] h-12 min-w-0 box-border appearance-none bg-surface border border-black/8 rounded-2xl px-4 py-2 pr-10 text-ink text-base md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cta/20 focus:border-cta transition cursor-pointer shadow-sm"
         >
-          <option value="" <?= $lh_area_district === '' ? 'selected' : '' ?>>Toate sectoarele</option>
+          <option value="" <?= $lh_area_district === '' ? 'selected' : '' ?>><?= htmlspecialchars(__('search.all_sectors'), ENT_QUOTES, 'UTF-8') ?></option>
           <?php foreach ($lh_sector_choices as $sector): ?>
             <option
               value="<?= htmlspecialchars($sector, ENT_QUOTES, 'UTF-8') ?>"
               <?= $lh_area_district === $sector ? 'selected' : '' ?>
             >
-              <?= htmlspecialchars($sector, ENT_QUOTES, 'UTF-8') ?>
+              <?= htmlspecialchars(lh_location_label($sector), ENT_QUOTES, 'UTF-8') ?>
             </option>
           <?php endforeach; ?>
         </select>
@@ -102,7 +102,7 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
     <!-- 1. DROPDOWN PROPRIETĂȚI -->
     <div class="flex-1 min-w-0">
       <div id="lh-search-property-label" class="block text-xs font-semibold text-blue-grey uppercase tracking-wide mb-1">
-        Proprietate
+        <?= htmlspecialchars(__('search.property'), ENT_QUOTES, 'UTF-8') ?>
       </div>
       <div class="relative">
         <select
@@ -112,7 +112,7 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
           class="w-full min-h-[3rem] h-12 min-w-0 box-border appearance-none bg-surface border border-black/8 rounded-2xl px-4 py-2 pr-10 text-ink text-base md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cta/20 focus:border-cta transition cursor-pointer shadow-sm"
         >
           <option value="all" <?= $sel_property === 'all' || $sel_property === '' ? 'selected' : '' ?>>
-            Toate proprietățile
+            <?= htmlspecialchars(__('search.all_properties'), ENT_QUOTES, 'UTF-8') ?>
           </option>
           <?php foreach ($properties as $prop): ?>
             <option
@@ -137,7 +137,7 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
     <!-- 2. CHECK-IN -->
     <div class="flex-1 min-w-0">
       <div id="lh-search-checkin-label" class="block text-xs font-semibold text-blue-grey uppercase tracking-wide mb-1">
-        Check-in
+        <?= htmlspecialchars(__('search.check_in'), ENT_QUOTES, 'UTF-8') ?>
       </div>
       <div class="relative">
         <input
@@ -145,7 +145,7 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
           id="check-in"
           name="check_in"
           aria-labelledby="lh-search-checkin-label"
-          placeholder="Selectează data"
+          placeholder="<?= htmlspecialchars(__('search.select_date'), ENT_QUOTES, 'UTF-8') ?>"
           readonly
           value="<?= htmlspecialchars($sel_checkin) ?>"
           class="w-full min-h-[3rem] min-w-0 bg-surface border border-black/8 rounded-2xl px-4 py-3 pl-10 text-ink text-base md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cta/20 focus:border-cta transition cursor-pointer shadow-sm box-border"
@@ -162,7 +162,7 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
     <!-- 3. CHECK-OUT -->
     <div class="flex-1 min-w-0">
       <div id="lh-search-checkout-label" class="block text-xs font-semibold text-blue-grey uppercase tracking-wide mb-1">
-        Check-out
+        <?= htmlspecialchars(__('search.check_out'), ENT_QUOTES, 'UTF-8') ?>
       </div>
       <div class="relative">
         <input
@@ -170,7 +170,7 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
           id="check-out"
           name="check_out"
           aria-labelledby="lh-search-checkout-label"
-          placeholder="Selectează data"
+          placeholder="<?= htmlspecialchars(__('search.select_date'), ENT_QUOTES, 'UTF-8') ?>"
           readonly
           value="<?= htmlspecialchars($sel_checkout) ?>"
           class="w-full min-h-[3rem] min-w-0 bg-surface border border-black/8 rounded-2xl px-4 py-3 pl-10 text-ink text-base md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cta/20 focus:border-cta transition cursor-pointer shadow-sm box-border"
@@ -187,7 +187,7 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
     <!-- 4. GUESTS -->
     <div class="w-full min-w-0 lg:w-36 lg:shrink-0">
       <div id="lh-search-guests-label" class="block text-xs font-semibold text-blue-grey uppercase tracking-wide mb-1">
-        Persoane
+        <?= htmlspecialchars(__('search.guests'), ENT_QUOTES, 'UTF-8') ?>
       </div>
       <div class="relative">
         <select
@@ -196,12 +196,12 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
           aria-labelledby="lh-search-guests-label"
           class="w-full min-h-[3rem] h-12 min-w-0 box-border appearance-none bg-surface border border-black/8 rounded-2xl px-4 py-2 pr-10 text-ink text-base md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cta/20 focus:border-cta transition cursor-pointer shadow-sm"
         >
-          <option value="1" <?= $sel_guests === '1' ? 'selected' : '' ?>>1 persoană</option>
-          <option value="2" <?= $sel_guests === '2' ? 'selected' : '' ?>>2 persoane</option>
-          <option value="3" <?= $sel_guests === '3' ? 'selected' : '' ?>>3 persoane</option>
-          <option value="4" <?= $sel_guests === '4' ? 'selected' : '' ?>>4 persoane</option>
-          <option value="5" <?= $sel_guests === '5' ? 'selected' : '' ?>>5 persoane</option>
-          <option value="6" <?= $sel_guests === '6' ? 'selected' : '' ?>>6+ persoane</option>
+          <option value="1" <?= $sel_guests === '1' ? 'selected' : '' ?>><?= htmlspecialchars(__('booking.guest_one'), ENT_QUOTES, 'UTF-8') ?></option>
+          <option value="2" <?= $sel_guests === '2' ? 'selected' : '' ?>><?= htmlspecialchars(__('booking.guest_many', ['n' => '2']), ENT_QUOTES, 'UTF-8') ?></option>
+          <option value="3" <?= $sel_guests === '3' ? 'selected' : '' ?>><?= htmlspecialchars(__('booking.guest_many', ['n' => '3']), ENT_QUOTES, 'UTF-8') ?></option>
+          <option value="4" <?= $sel_guests === '4' ? 'selected' : '' ?>><?= htmlspecialchars(__('booking.guest_many', ['n' => '4']), ENT_QUOTES, 'UTF-8') ?></option>
+          <option value="5" <?= $sel_guests === '5' ? 'selected' : '' ?>><?= htmlspecialchars(__('booking.guest_many', ['n' => '5']), ENT_QUOTES, 'UTF-8') ?></option>
+          <option value="6" <?= $sel_guests === '6' ? 'selected' : '' ?>><?= htmlspecialchars(__('booking.guest_six_plus'), ENT_QUOTES, 'UTF-8') ?></option>
         </select>
         <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
           <svg class="w-4 h-4 text-blue-grey" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,13 +233,13 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M5 13l4 4L19 7"/>
         </svg>
-        <span id="search-btn-text">Caută</span>
+        <span id="search-btn-text"><?= htmlspecialchars(__('search.search'), ENT_QUOTES, 'UTF-8') ?></span>
       </button>
     </div>
 
   </div><!-- end flex row -->
 
-  <p class="text-xs text-blue-grey mt-2 px-0.5 leading-snug">Minim o noapte: alege check-out în ziua următoare sau mai târziu față de check-in.</p>
+  <p class="text-xs text-blue-grey mt-2 px-0.5 leading-snug"><?= htmlspecialchars(__('search.min_night_hint'), ENT_QUOTES, 'UTF-8') ?></p>
   <p id="lh-search-date-error" class="hidden mt-1 text-xs font-medium text-red-800 px-0.5" role="alert"></p>
 
   <!-- Loading indicator (ascuns implicit) -->
@@ -248,7 +248,7 @@ if ($lh_search_bar_show_sector && $lh_area_district !== '' && !in_array($lh_area
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
     </svg>
-    Se caută proprietăți disponibile...
+    <?= htmlspecialchars(__('search.loading'), ENT_QUOTES, 'UTF-8') ?>
   </div>
 
 </section>

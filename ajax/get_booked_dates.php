@@ -22,7 +22,7 @@ $property_id = filter_input(INPUT_GET, 'property_id', FILTER_VALIDATE_INT);
 
 if (!$property_id || $property_id < 1) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'property_id invalid.']);
+    echo json_encode(['success' => false, 'error' => lh_translate('api.property_id_invalid')]);
     exit;
 }
 
@@ -60,7 +60,7 @@ try {
 
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Eroare server.']);
+    echo json_encode(['success' => false, 'error' => lh_translate('api.server_error')]);
     // Log eroarea intern, nu o expune clientului
     error_log('get_booked_dates error: ' . $e->getMessage());
 }

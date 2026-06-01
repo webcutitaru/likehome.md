@@ -11,14 +11,14 @@ $lhSeoOgTitle = isset($ogTitle) ? (string) $ogTitle : $lhSeoTitle;
 $lhSeoOgDesc = isset($ogDescription) ? (string) $ogDescription : ($lhSeoDesc !== '' ? $lhSeoDesc : $lhSeoTitle);
 $lhSeoOgType = isset($ogType) ? (string) $ogType : 'website';
 $lhSeoOgImage = isset($ogImage) ? trim((string) $ogImage) : '';
-$lhSeoOgLocale = isset($ogLocale) ? (string) $ogLocale : 'ro_MD';
+$lhSeoOgLocale = isset($ogLocale) ? (string) $ogLocale : lh_locale_og_tag();
 $lhSeoTwitterCard = isset($twitterCard) ? (string) $twitterCard : ($lhSeoOgImage !== '' ? 'summary_large_image' : 'summary');
 $lhSeoRobots = isset($robotsMeta) ? (string) $robotsMeta : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 $lhSeoSiteName = isset($siteName) ? (string) $siteName : 'Like HOME';
 $lhHeadJsonLd = (isset($lhJsonLd) && is_string($lhJsonLd) && trim($lhJsonLd) !== '') ? trim($lhJsonLd) : '';
 ?>
 <!DOCTYPE html>
-<html lang="ro">
+<html lang="<?= htmlspecialchars(lh_locale_html_lang(), ENT_QUOTES, 'UTF-8') ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,6 +28,17 @@ $lhHeadJsonLd = (isset($lhJsonLd) && is_string($lhJsonLd) && trim($lhJsonLd) !==
   <meta name="description" content="<?= htmlspecialchars($lhSeoDesc, ENT_QUOTES, 'UTF-8') ?>">
 <?php endif; ?>
   <link rel="canonical" href="<?= htmlspecialchars($lhSeoCanonical, ENT_QUOTES, 'UTF-8') ?>">
+<?php
+$lhAlternateUrls = (isset($lhLocaleAlternateUrls) && is_array($lhLocaleAlternateUrls))
+    ? $lhLocaleAlternateUrls
+    : lh_locale_alternate_urls();
+foreach ($lhAlternateUrls as $lhHrefLang => $lhAltHref):
+?>
+  <link rel="alternate" hreflang="<?= htmlspecialchars($lhHrefLang, ENT_QUOTES, 'UTF-8') ?>" href="<?= htmlspecialchars($lhAltHref, ENT_QUOTES, 'UTF-8') ?>">
+<?php endforeach;
+if (isset($lhAlternateUrls['ro'])): ?>
+  <link rel="alternate" hreflang="x-default" href="<?= htmlspecialchars($lhAlternateUrls['ro'], ENT_QUOTES, 'UTF-8') ?>">
+<?php endif; ?>
   <meta name="theme-color" content="#1e3a5f">
   <meta property="og:site_name" content="<?= htmlspecialchars($lhSeoSiteName, ENT_QUOTES, 'UTF-8') ?>">
   <meta property="og:locale" content="<?= htmlspecialchars($lhSeoOgLocale, ENT_QUOTES, 'UTF-8') ?>">
@@ -89,6 +100,16 @@ $lhHeadJsonLd = (isset($lhJsonLd) && is_string($lhJsonLd) && trim($lhJsonLd) !==
     #site-header.is-scrolled {
       box-shadow: 0 8px 28px rgb(0 0 0 / 0.14);
     }
+    .lh-lang-switcher__menu {
+      transform-origin: top right;
+      transform: translateY(-4px) scale(0.98);
+      opacity: 0;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+    .lh-lang-switcher__menu--open {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
   </style>
 <?php if ($lhHeadJsonLd !== ''): ?>
   <script type="application/ld+json"><?= $lhHeadJsonLd ?></script>
@@ -105,7 +126,7 @@ $lh_nav_items = lh_site_nav_items();
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="relative flex items-center min-h-[4.25rem] py-2 gap-4 lg:gap-6">
       <div class="flex flex-1 min-w-0 justify-start">
-        <a href="<?= htmlspecialchars(lh_public_url(), ENT_QUOTES, 'UTF-8') ?>" class="flex items-center gap-2.5 group shrink-0 min-w-0" aria-label="Like HOME — pagina principală">
+        <a href="<?= htmlspecialchars(lh_locale_url(), ENT_QUOTES, 'UTF-8') ?>" class="flex items-center gap-2.5 group shrink-0 min-w-0" aria-label="<?= htmlspecialchars(__('nav.home_aria'), ENT_QUOTES, 'UTF-8') ?>">
           <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 shadow-sm shadow-black/10">
             <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
@@ -118,7 +139,7 @@ $lh_nav_items = lh_site_nav_items();
         </a>
       </div>
 
-      <nav class="hidden lg:flex absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 xl:gap-1 pointer-events-auto" aria-label="Navigare principală">
+      <nav class="hidden lg:flex absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 xl:gap-1" aria-label="<?= htmlspecialchars(__('nav.main'), ENT_QUOTES, 'UTF-8') ?>">
         <?php foreach ($lh_nav_items as $item):
             $navCurrent = lh_nav_is_current($item['file']);
             $navClass = $navCurrent
@@ -133,11 +154,12 @@ $lh_nav_items = lh_site_nav_items();
         <?php endforeach; ?>
       </nav>
 
-      <div class="flex flex-1 justify-end items-center gap-2 sm:gap-3 min-w-0">
-        <a href="<?= htmlspecialchars(lh_public_url('index.php#search-bar'), ENT_QUOTES, 'UTF-8') ?>" class="lh-header-cta hidden sm:inline-flex lg:hidden items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap bg-white/15 text-white hover:bg-white/25 ring-1 ring-white/20">
-          Rezervă
+      <div class="relative z-20 flex flex-1 justify-end items-center gap-1.5 sm:gap-2 min-w-0 shrink-0 pointer-events-none">
+<?php require __DIR__ . '/locale_switcher.php'; ?>
+        <a href="<?= htmlspecialchars(lh_locale_url('index.php#search-bar'), ENT_QUOTES, 'UTF-8') ?>" class="lh-header-cta hidden sm:inline-flex lg:hidden items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap bg-white/15 text-white hover:bg-white/25 ring-1 ring-white/20 pointer-events-auto">
+          <?= htmlspecialchars(__('nav.book'), ENT_QUOTES, 'UTF-8') ?>
         </a>
-        <button id="mobile-menu-toggle" type="button" class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl transition-all border border-white/30 text-white hover:bg-white/10" aria-label="Deschide meniul" aria-expanded="false" aria-controls="mobile-drawer">
+        <button id="mobile-menu-toggle" type="button" class="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-xl transition-all border border-white/30 text-white hover:bg-white/10 pointer-events-auto" aria-label="<?= htmlspecialchars(__('nav.open_menu'), ENT_QUOTES, 'UTF-8') ?>" aria-expanded="false" aria-controls="mobile-drawer">
           <svg id="mobile-menu-open-icon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
@@ -151,7 +173,7 @@ $lh_nav_items = lh_site_nav_items();
     <div id="mobile-drawer-backdrop" class="fixed inset-0 bg-ink/40 opacity-0 pointer-events-none transition-opacity duration-300 lg:hidden z-50"></div>
     <aside id="mobile-drawer" class="fixed top-0 right-0 h-full w-[86vw] max-w-sm bg-white/95 text-ink premium-header-blur shadow-2xl shadow-black/15 translate-x-full transition-transform duration-300 lg:hidden z-[60] border-l border-black/8">
       <div class="flex items-center justify-between px-5 py-4 border-b border-black/8">
-        <a href="<?= htmlspecialchars(lh_public_url(), ENT_QUOTES, 'UTF-8') ?>" class="flex items-center gap-2 min-w-0" aria-label="Like HOME — pagina principală">
+        <a href="<?= htmlspecialchars(lh_locale_url(), ENT_QUOTES, 'UTF-8') ?>" class="flex items-center gap-2 min-w-0" aria-label="<?= htmlspecialchars(__('nav.home_aria'), ENT_QUOTES, 'UTF-8') ?>">
           <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-logo text-white ring-1 ring-black/10 shadow-sm">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
@@ -162,13 +184,13 @@ $lh_nav_items = lh_site_nav_items();
             <span class="text-xs font-bold tracking-wide uppercase">HOME</span>
           </span>
         </a>
-        <button id="mobile-drawer-close" type="button" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-black/10 text-ink hover:bg-black/[0.04] transition-all" aria-label="Închide meniul">
+        <button id="mobile-drawer-close" type="button" class="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-black/10 text-ink hover:bg-black/[0.04] transition-all" aria-label="<?= htmlspecialchars(__('nav.close_menu'), ENT_QUOTES, 'UTF-8') ?>">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
-      <nav class="px-5 py-6 flex flex-col min-h-[calc(100vh-81px)]" aria-label="Navigare mobilă">
+      <nav class="px-5 py-6 flex flex-col min-h-[calc(100vh-81px)]" aria-label="<?= htmlspecialchars(__('nav.mobile'), ENT_QUOTES, 'UTF-8') ?>">
         <?php foreach ($lh_nav_items as $item):
             $navCurrent = lh_nav_is_current($item['file']);
             $mClass = $navCurrent ? 'text-ink font-semibold' : 'text-ink/70 font-medium';
@@ -179,8 +201,8 @@ $lh_nav_items = lh_site_nav_items();
             <?= $navCurrent ? 'aria-current="page"' : '' ?>
           ><?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?></a>
         <?php endforeach; ?>
-        <a href="<?= htmlspecialchars(lh_public_url('index.php#search-bar'), ENT_QUOTES, 'UTF-8') ?>" class="mt-6 py-3.5 text-center rounded-xl bg-cta text-white text-sm font-semibold shadow-md shadow-black/10 hover:brightness-110 transition-all">
-          Rezervă — caută date
+        <a href="<?= htmlspecialchars(lh_locale_url('index.php#search-bar'), ENT_QUOTES, 'UTF-8') ?>" class="mt-6 py-3.5 text-center rounded-xl bg-cta text-white text-sm font-semibold shadow-md shadow-black/10 hover:brightness-110 transition-all">
+          <?= htmlspecialchars(__('nav.book_search'), ENT_QUOTES, 'UTF-8') ?>
         </a>
       </nav>
     </aside>

@@ -6,9 +6,8 @@
 
 require_once __DIR__ . '/config.php';
 
-$pageTitle = 'Chirie Termen Scurt Chișinău | Apartamente de Închiriat — Like HOME';
-$pageDescription = 'Cauți chirie pe termen scurt în Chișinău? Rezervă direct apartamente și case verificate. Oferim cazare în zone centrale, comunicare clară și prețuri avantajoase prin Like HOME. Rezervă acum!';
-$canonicalUrl = lh_absolute_url('');
+$pageTitle = __('page.index.title');
+$pageDescription = __('page.index.description');
 
 $properties      = [];
 $featured_props  = [];
@@ -21,11 +20,13 @@ try {
     $stmt_feat = $pdo->query(
         'SELECT * FROM properties WHERE is_active = 1 ORDER BY created_at DESC LIMIT 9'
     );
-    $featured_props = $stmt_feat->fetchAll();
+    $featured_props = lh_property_apply_locale_list($stmt_feat->fetchAll(), $pdo);
 } catch (Exception $e) {
     $properties     = [];
     $featured_props = [];
 }
+
+$canonicalUrl = lh_absolute_locale_url('');
 
 $ogImage = '';
 if ($featured_props !== []) {
@@ -45,7 +46,11 @@ $lhJsonLd = json_encode([
     'name' => 'Like HOME',
     'url' => lh_absolute_url(''),
     'description' => $pageDescription,
-    'inLanguage' => 'ro-MD',
+    'inLanguage' => match (lh_current_locale()) {
+        'en' => 'en-US',
+        'ru' => 'ru-RU',
+        default => 'ro-MD',
+    },
     'publisher' => [
         '@type' => 'Organization',
         'name' => 'Like HOME',
@@ -64,10 +69,10 @@ $lhJsonLd = json_encode([
 <div class="w-full bg-logo text-white relative">
   <div class="max-w-4xl mx-auto px-4 pt-12 md:pt-16 pb-6 md:pb-8 lg:pb-36 text-center font-sans">
     <h1 class="text-3xl md:text-5xl font-bold text-white mb-3">
-      Găsește proprietatea perfectă
+      <?= htmlspecialchars(__('page.index.hero_title'), ENT_QUOTES, 'UTF-8') ?>
     </h1>
     <p class="text-white/70 text-base md:text-lg max-w-2xl mx-auto">
-      Caută după locație, date și număr de persoane
+      <?= htmlspecialchars(__('page.index.hero_subtitle'), ENT_QUOTES, 'UTF-8') ?>
     </p>
   </div>
   <div class="relative z-10 flex justify-center px-3 sm:px-4 min-w-0 pb-8 md:pb-8 lg:absolute lg:inset-x-0 lg:bottom-0 lg:translate-y-1/2 lg:pb-0">
@@ -101,16 +106,16 @@ $lhJsonLd = json_encode([
             );
         }
     } else {
-        echo '<p class="col-span-full text-blue-grey">Nu există proprietăți disponibile momentan.</p>';
+        echo '<p class="col-span-full text-blue-grey">' . htmlspecialchars(__('page.index.empty'), ENT_QUOTES, 'UTF-8') . '</p>';
     }
     ?>
   </div>
   <div id="home-cta-wrap" class="flex justify-center mt-10 mb-10 md:mb-14">
     <a
-      href="<?= htmlspecialchars(lh_public_url('properties.php'), ENT_QUOTES, 'UTF-8') ?>"
+      href="<?= htmlspecialchars(lh_locale_url('properties.php'), ENT_QUOTES, 'UTF-8') ?>"
       class="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl text-sm font-semibold bg-cta text-white shadow-md shadow-black/10 hover:brightness-110 transition-all"
     >
-      Vezi toate proprietățile
+      <?= htmlspecialchars(__('page.index.cta_all'), ENT_QUOTES, 'UTF-8') ?>
       <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
       </svg>
@@ -121,7 +126,7 @@ $lhJsonLd = json_encode([
 <!-- ── Bară încredere (4 puncte premium) — fundal full-bleed ───── -->
 <section class="w-full border-t border-cta/10 bg-gradient-to-b from-cta/[0.04] to-transparent mt-10 md:mt-14" aria-labelledby="home-trust-heading">
   <div class="max-w-6xl mx-auto px-4 pt-7 pb-0 md:pt-9 md:pb-0">
-  <h2 id="home-trust-heading" class="sr-only">De ce Like HOME</h2>
+  <h2 id="home-trust-heading" class="sr-only"><?= htmlspecialchars(__('page.index.trust_heading'), ENT_QUOTES, 'UTF-8') ?></h2>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
     <div class="flex flex-col items-center text-center">
       <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cta/10 text-cta ring-1 ring-cta/15 mb-4">
@@ -129,8 +134,8 @@ $lhJsonLd = json_encode([
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
         </svg>
       </div>
-      <h3 class="font-semibold text-ink mb-1.5 text-sm md:text-base">Locuințe verificate</h3>
-      <p class="text-sm text-blue-grey leading-relaxed">Fiecare apartament este verificat înainte de listare, pentru confort și siguranță.</p>
+      <h3 class="font-semibold text-ink mb-1.5 text-sm md:text-base"><?= htmlspecialchars(__('page.index.trust1_title'), ENT_QUOTES, 'UTF-8') ?></h3>
+      <p class="text-sm text-blue-grey leading-relaxed"><?= htmlspecialchars(__('page.index.trust1_desc'), ENT_QUOTES, 'UTF-8') ?></p>
     </div>
     <div class="flex flex-col items-center text-center">
       <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cta/10 text-cta ring-1 ring-cta/15 mb-4">
@@ -138,8 +143,8 @@ $lhJsonLd = json_encode([
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
         </svg>
       </div>
-      <h3 class="font-semibold text-ink mb-1.5 text-sm md:text-base">Curățenie premium</h3>
-      <p class="text-sm text-blue-grey leading-relaxed">Pregătire impecabilă între sejururi, la standarde înalte de ospitalitate.</p>
+      <h3 class="font-semibold text-ink mb-1.5 text-sm md:text-base"><?= htmlspecialchars(__('page.index.trust2_title'), ENT_QUOTES, 'UTF-8') ?></h3>
+      <p class="text-sm text-blue-grey leading-relaxed"><?= htmlspecialchars(__('page.index.trust2_desc'), ENT_QUOTES, 'UTF-8') ?></p>
     </div>
     <div class="flex flex-col items-center text-center">
       <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cta/10 text-cta ring-1 ring-cta/15 mb-4">
@@ -147,8 +152,8 @@ $lhJsonLd = json_encode([
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
       </div>
-      <h3 class="font-semibold text-ink mb-1.5 text-sm md:text-base">Check-in flexibil</h3>
-      <p class="text-sm text-blue-grey leading-relaxed">Proces simplu, ghid digital și suport când ai nevoie de ajutor.</p>
+      <h3 class="font-semibold text-ink mb-1.5 text-sm md:text-base"><?= htmlspecialchars(__('page.index.trust3_title'), ENT_QUOTES, 'UTF-8') ?></h3>
+      <p class="text-sm text-blue-grey leading-relaxed"><?= htmlspecialchars(__('page.index.trust3_desc'), ENT_QUOTES, 'UTF-8') ?></p>
     </div>
     <div class="flex flex-col items-center text-center">
       <div class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cta/10 text-cta ring-1 ring-cta/15 mb-4">
@@ -156,8 +161,8 @@ $lhJsonLd = json_encode([
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
         </svg>
       </div>
-      <h3 class="font-semibold text-ink mb-1.5 text-sm md:text-base">Asistență dedicată</h3>
-      <p class="text-sm text-blue-grey leading-relaxed">Echipă disponibilă pe durata sejurului pentru întrebări și situații urgente.</p>
+      <h3 class="font-semibold text-ink mb-1.5 text-sm md:text-base"><?= htmlspecialchars(__('page.index.trust4_title'), ENT_QUOTES, 'UTF-8') ?></h3>
+      <p class="text-sm text-blue-grey leading-relaxed"><?= htmlspecialchars(__('page.index.trust4_desc'), ENT_QUOTES, 'UTF-8') ?></p>
     </div>
   </div>
   </div>
@@ -165,7 +170,7 @@ $lhJsonLd = json_encode([
 
 <?php
 // Recenzii statice (homepage).
-$lh_reviews_hero_title = 'Pe Booking și Airbnb — Păreri sincere după cazare';
+$lh_reviews_hero_title = __('page.index.reviews_title');
 $lh_reviews_static = [
     [
         'name' => 'Lilia',
@@ -258,7 +263,7 @@ $lh_reviews_static = [
         'text' => 'Ședere minunată,plăcută și curată!',
     ],
 ];
-$lh_review_mailto = 'mailto:contact@likehome.md?subject=' . rawurlencode('M-am simțit excelent pe durata șederii');
+$lh_review_mailto = 'mailto:contact@likehome.md?subject=' . rawurlencode(__('page.index.reviews_mailto_subject'));
 
 $lh_str_len = static function (string $s): int {
     return function_exists('mb_strlen') ? mb_strlen($s, 'UTF-8') : strlen($s);
@@ -296,13 +301,13 @@ $lh_str_cut = static function (string $s, int $len): string {
     </h2>
   </div>
 
-  <div class="relative" role="region" aria-roledescription="carousel" aria-label="Recenzii de la oaspeți">
+  <div class="relative" role="region" aria-roledescription="carousel" aria-label="<?= htmlspecialchars(__('page.index.reviews_aria'), ENT_QUOTES, 'UTF-8') ?>">
     <div class="flex items-center gap-2 sm:gap-3">
       <button
         type="button"
         id="lh-home-reviews-prev"
         class="lh-home-reviews-arrow inline-flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full border border-black/[0.08] bg-white text-ink shadow-sm hover:bg-cta/10 hover:border-cta/30 transition-colors disabled:pointer-events-none disabled:opacity-40"
-        aria-label="Recenzia anterioară"
+        aria-label="<?= htmlspecialchars(__('page.index.reviews_prev'), ENT_QUOTES, 'UTF-8') ?>"
         aria-controls="lh-home-reviews-track"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -331,7 +336,7 @@ $lh_str_cut = static function (string $s, int $len): string {
             </div>
           </header>
           <div class="flex flex-wrap items-center gap-x-1.5 sm:gap-x-2 gap-y-1 text-xs sm:text-sm text-blue-grey mb-2 sm:mb-3 shrink-0">
-            <span class="inline-flex text-ink gap-0.5" aria-label="<?= (int) $rev['rating'] ?> din 5 stele">
+            <span class="inline-flex text-ink gap-0.5" aria-label="<?= htmlspecialchars(__('page.index.rating_stars', ['n' => (string) (int) $rev['rating']]), ENT_QUOTES, 'UTF-8') ?>">
               <?php for ($s = 0; $s < (int) $rev['rating']; $s++): ?>
               <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
               <?php endfor; ?>
@@ -345,7 +350,7 @@ $lh_str_cut = static function (string $s, int $len): string {
           <?php if ($lh_long): ?>
           <details class="group text-ink/90 flex flex-col min-h-0 text-xs sm:text-sm leading-snug">
             <summary class="cursor-pointer list-none [&::-webkit-details-marker]:hidden shrink-0 block h-[3lh] overflow-hidden open:h-auto open:min-h-0 open:overflow-visible">
-              <span class="group-open:hidden line-clamp-3 block"><?= htmlspecialchars($lh_str_cut($rev['text'], 150) . '… ', ENT_QUOTES, 'UTF-8') ?><span class="text-ink font-medium underline underline-offset-2">Afișează mai mult</span></span>
+              <span class="group-open:hidden line-clamp-3 block"><?= htmlspecialchars($lh_str_cut($rev['text'], 150) . '… ', ENT_QUOTES, 'UTF-8') ?><span class="text-ink font-medium underline underline-offset-2"><?= htmlspecialchars(__('page.index.reviews_more'), ENT_QUOTES, 'UTF-8') ?></span></span>
             </summary>
             <p class="mt-2 text-xs sm:text-sm leading-snug"><?= htmlspecialchars($rev['text'], ENT_QUOTES, 'UTF-8') ?></p>
           </details>
@@ -359,12 +364,12 @@ $lh_str_cut = static function (string $s, int $len): string {
             <svg class="h-4 sm:h-5 w-auto shrink-0 text-[#003580]" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
               <path fill="currentColor" d="M24 0H0v24h24ZM8.575 6.563h2.658c2.108 0 3.473 1.15 3.473 2.898 0 1.15-.575 1.82-.91 2.108l-.287.263.335.192c.815.479 1.318 1.389 1.318 2.395 0 1.988-1.51 3.257-3.857 3.257H7.449V7.713c0-.623.503-1.126 1.126-1.15zm1.7 1.868c-.479.024-.694.264-.694.79v1.893h1.676c.958 0 1.294-.743 1.294-1.365 0-.815-.503-1.318-1.318-1.318zm-.096 4.36c-.407.071-.598.31-.598.79v2.251h1.868c.934 0 1.509-.55 1.509-1.533 0-.934-.599-1.509-1.51-1.509zm7.737 2.394c.743 0 1.341.599 1.341 1.342a1.34 1.34 0 0 1-1.341 1.341 1.355 1.355 0 0 1-1.341-1.341c0-.743.598-1.342 1.34-1.342z"/>
             </svg>
-            <span>Recenzie pe <span class="font-medium text-ink">Booking.com</span></span>
+            <span><?= htmlspecialchars(__('page.index.review_on_booking'), ENT_QUOTES, 'UTF-8') ?></span>
             <?php else: ?>
             <svg class="h-4 sm:h-5 w-auto shrink-0 text-[#FF5A5F]" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
               <path fill="currentColor" d="M12.001 18.275c-1.353-1.697-2.148-3.184-2.413-4.457-.263-1.027-.16-1.848.291-2.465.477-.71 1.188-1.056 2.121-1.056s1.643.345 2.12 1.063c.446.61.558 1.432.286 2.465-.291 1.298-1.085 2.785-2.412 4.458zm9.601 1.14c-.185 1.246-1.034 2.28-2.2 2.783-2.253.98-4.483-.583-6.392-2.704 3.157-3.951 3.74-7.028 2.385-9.018-.795-1.14-1.933-1.695-3.394-1.695-2.944 0-4.563 2.49-3.927 5.382.37 1.565 1.352 3.343 2.917 5.332-.98 1.085-1.91 1.856-2.732 2.333-.636.344-1.245.558-1.828.609-2.679.399-4.778-2.2-3.825-4.88.132-.345.395-.98.845-1.961l.025-.053c1.464-3.178 3.242-6.79 5.285-10.795l.053-.132.58-1.116c.45-.822.635-1.19 1.351-1.643.346-.21.77-.315 1.246-.315.954 0 1.698.558 2.016 1.007.158.239.345.557.582.953l.558 1.089.08.159c2.041 4.004 3.821 7.608 5.279 10.794l.026.025.533 1.22.318.764c.243.613.294 1.222.213 1.858zm1.22-2.39c-.186-.583-.505-1.271-.9-2.094v-.03c-1.889-4.006-3.642-7.608-5.307-10.844l-.111-.163C15.317 1.461 14.468 0 12.001 0c-2.44 0-3.476 1.695-4.535 3.898l-.081.16c-1.669 3.236-3.421 6.843-5.303 10.847v.053l-.559 1.22c-.21.504-.317.768-.345.847C-.172 20.74 2.611 24 5.98 24c.027 0 .132 0 .265-.027h.372c1.75-.213 3.554-1.325 5.384-3.317 1.829 1.989 3.635 3.104 5.382 3.317h.372c.133.027.239.027.265.027 3.37.003 6.152-3.261 4.802-6.975z"/>
             </svg>
-            <span>Recenzie pe <span class="font-medium text-ink">Airbnb</span></span>
+            <span><?= htmlspecialchars(__('page.index.review_on_airbnb'), ENT_QUOTES, 'UTF-8') ?></span>
             <?php endif; ?>
           </div>
         </article>
@@ -374,7 +379,7 @@ $lh_str_cut = static function (string $s, int $len): string {
         type="button"
         id="lh-home-reviews-next"
         class="lh-home-reviews-arrow inline-flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full border border-black/[0.08] bg-white text-ink shadow-sm hover:bg-cta/10 hover:border-cta/30 transition-colors disabled:pointer-events-none disabled:opacity-40"
-        aria-label="Recenzia următoare"
+        aria-label="<?= htmlspecialchars(__('page.index.reviews_next'), ENT_QUOTES, 'UTF-8') ?>"
         aria-controls="lh-home-reviews-track"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -401,7 +406,7 @@ $lh_str_cut = static function (string $s, int $len): string {
         </defs>
         <path fill="url(#lh-instagram-brand-gradient)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
       </svg>
-      Urmărește-ne pe Instagram
+      <?= htmlspecialchars(__('page.index.reviews_instagram'), ENT_QUOTES, 'UTF-8') ?>
     </a>
     <a
       href="<?= htmlspecialchars($lh_review_mailto, ENT_QUOTES, 'UTF-8') ?>"
@@ -410,7 +415,7 @@ $lh_str_cut = static function (string $s, int $len): string {
       <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
       </svg>
-      Lasă o recenzie
+      <?= htmlspecialchars(__('page.index.reviews_leave'), ENT_QUOTES, 'UTF-8') ?>
     </a>
   </div>
   </div>

@@ -25,6 +25,8 @@ header('X-Content-Type-Options: nosniff');
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../components/property_card.php';
 
+$filterLocale = lh_resolve_request_locale();
+
 // ── Validare & sanitizare input ─────────────────────────────────
 $raw_property = $_POST['property_id'] ?? 'all';
 $property_id  = ($raw_property === 'all') ? 'all' : filter_var($raw_property, FILTER_VALIDATE_INT);
@@ -55,7 +57,7 @@ $has_guests   = in_array($guests, ['1','2','3','4'], true);
 
 // Check-out trebuie să fie după check-in
 if ($has_dates && $check_out <= $check_in) {
-    echo '<div class="col-span-full text-center py-8 text-red-500 font-medium">Check-out trebuie să fie cel puțin în ziua următoare față de check-in (minim o noapte).</div>';
+    echo '<div class="col-span-full text-center py-8 text-red-500 font-medium">' . htmlspecialchars(lh_translate('api.dates_order', [], $filterLocale), ENT_QUOTES, 'UTF-8') . '</div>';
     exit;
 }
 
@@ -109,11 +111,11 @@ try {
     $sql = 'SELECT p.* FROM properties p WHERE ' . implode(' AND ', $where) . ' ORDER BY p.title ASC';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    $results = $stmt->fetchAll();
+    $results = lh_property_apply_locale_list($stmt->fetchAll(), $pdo);
 
 } catch (Exception $e) {
     error_log('filter_properties error: ' . $e->getMessage());
-    echo '<div class="col-span-full text-center py-8 text-red-500 font-medium">A apărut o eroare. Te rugăm încearcă din nou.</div>';
+    echo '<div class="col-span-full text-center py-8 text-red-500 font-medium">' . htmlspecialchars(lh_translate('search.error_generic', [], $filterLocale), ENT_QUOTES, 'UTF-8') . '</div>';
     exit;
 }
 
@@ -125,8 +127,8 @@ if (empty($results)) {
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
           d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
       </svg>
-      <p class="text-lg font-semibold text-gray-600 mb-1">Nicio proprietate disponibilă</p>
-      <p class="text-sm">Încearcă alte date sau modifică numărul de persoane.</p>
+      <p class="text-lg font-semibold text-gray-600 mb-1">' . htmlspecialchars(lh_translate('search.no_results_title', [], $filterLocale), ENT_QUOTES, 'UTF-8') . '</p>
+      <p class="text-sm">' . htmlspecialchars(lh_translate('search.no_results_hint', [], $filterLocale), ENT_QUOTES, 'UTF-8') . '</p>
     </div>
     ';
     exit;

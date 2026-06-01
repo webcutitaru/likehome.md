@@ -29,21 +29,28 @@ try {
     $pdo = getPDO();
 
     if ($slug) {
-        $stmt = $pdo->prepare('SELECT * FROM properties WHERE slug = :slug AND is_active = 1 LIMIT 1');
-        $stmt->execute([':slug' => $slug]);
+        $property = lh_property_resolve_by_slug($pdo, (string) $slug);
+        if (!$property) {
+            http_response_code(404);
+            die(__('errors.property_not_found'));
+        }
     } elseif ($id) {
         $stmt = $pdo->prepare('SELECT * FROM properties WHERE id = :id AND is_active = 1 LIMIT 1');
         $stmt->execute([':id' => $id]);
+        $property = $stmt->fetch();
+        if (!$property) {
+            http_response_code(404);
+            die(__('errors.property_not_found'));
+        }
+        $property = lh_property_apply_locale($property, $pdo);
     } else {
-        header('Location: ' . lh_public_url());
+        header('Location: ' . lh_locale_url());
         exit;
     }
 
-    $property = $stmt->fetch();
-
     if (!$property) {
         http_response_code(404);
-        die('Proprietate negăsită');
+        die(__('errors.property_not_found'));
     }
 
     $property['_pricing_periods'] = lh_property_pricing_periods_load((int) $property['id']);
@@ -61,34 +68,34 @@ try {
             'SELECT * FROM properties WHERE is_active = 1 AND id != :id AND district = :district ORDER BY created_at DESC LIMIT 3'
         );
         $stmtNeighbors->execute([':id' => $current_prop_id, ':district' => $district_trim]);
-        $same_area_properties = $stmtNeighbors->fetchAll();
+        $same_area_properties = lh_property_apply_locale_list($stmtNeighbors->fetchAll(), $pdo);
         if ($same_area_properties !== []) {
-            $same_area_see_more_url = lh_public_url('properties.php?' . http_build_query(['district' => $district_trim]));
-            $same_area_label = $district_trim;
+            $same_area_see_more_url = lh_locale_url('properties.php?' . http_build_query(['district' => $district_trim]));
+            $same_area_label = lh_location_label($district_trim);
         }
     } elseif ($city_trim !== '') {
         $stmtNeighbors = $pdo->prepare(
             'SELECT * FROM properties WHERE is_active = 1 AND id != :id AND city = :city ORDER BY created_at DESC LIMIT 3'
         );
         $stmtNeighbors->execute([':id' => $current_prop_id, ':city' => $city_trim]);
-        $same_area_properties = $stmtNeighbors->fetchAll();
+        $same_area_properties = lh_property_apply_locale_list($stmtNeighbors->fetchAll(), $pdo);
         if ($same_area_properties !== []) {
-            $same_area_see_more_url = lh_public_url('properties.php?' . http_build_query(['city' => $city_trim]));
-            $same_area_label = $city_trim;
+            $same_area_see_more_url = lh_locale_url('properties.php?' . http_build_query(['city' => $city_trim]));
+            $same_area_label = lh_location_label($city_trim);
         }
     }
 
 } catch (Exception $e) {
     error_log('property-details error: ' . $e->getMessage());
-    die('Server error');
+    die(__('page.property.server_error'));
 }
 
 $images = !empty($property['image_name']) ? array_filter(explode(',', $property['image_name'])) : [];
 $propertyIdForImages = (int) ($property['id'] ?? 0);
 
-$lhPropTitleRaw = trim((string) ($property['title'] ?? 'Proprietate'));
+$lhPropTitleRaw = trim((string) ($property['title'] ?? __('card.fallback_title')));
 if ($lhPropTitleRaw === '') {
-    $lhPropTitleRaw = 'Proprietate';
+    $lhPropTitleRaw = __('card.fallback_title');
 }
 $pageTitle = $lhPropTitleRaw . ' — Like HOME';
 
@@ -111,7 +118,8 @@ $slugCanon = trim((string) ($property['slug'] ?? ''));
 $detailsQuery = $slugCanon !== ''
     ? http_build_query(['slug' => $slugCanon])
     : http_build_query(['id' => (int) ($property['id'] ?? 0)]);
-$canonicalUrl = lh_absolute_url('property-details.php?' . $detailsQuery);
+$canonicalUrl = lh_absolute_locale_url('property-details.php?' . $detailsQuery);
+$lhLocaleAlternateUrls = lh_property_locale_alternate_urls($property);
 
 $ogImage = '';
 if ($images !== []) {
@@ -139,6 +147,11 @@ $ldGraph = [
     'name' => $lhPropTitleRaw,
     'description' => $pageDescription,
     'url' => $canonicalUrl,
+    'inLanguage' => match (lh_current_locale()) {
+        'en' => 'en-US',
+        'ru' => 'ru-RU',
+        default => 'ro-MD',
+    },
 ];
 if ($ogImage !== '') {
     $ldGraph['image'] = [$ogImage];
@@ -466,7 +479,7 @@ Fără imagini
      data-thumb-index="<?= (int)$idx ?>"
      role="button"
      tabindex="0"
-     aria-label="Imagine <?= (int)$idx + 1 ?>">
+     aria-label="<?= htmlspecialchars(__('booking.image_n', ['n' => (string) ((int) $idx + 1)]), ENT_QUOTES, 'UTF-8') ?>">
 <img src="<?= htmlspecialchars(lh_property_image_url($propertyIdForImages, trim($img), 'thumb'), ENT_QUOTES, 'UTF-8') ?>"
      class="block h-full w-full object-cover" alt="" loading="lazy">
 </div>
@@ -484,8 +497,8 @@ Fără imagini
 <i data-lucide="users" class="w-4 h-4 sm:w-5 sm:h-5"></i>
 </div>
 <div class="min-w-0">
-<p class="text-xs text-blue-grey leading-tight">Capacitate</p>
-<p class="font-bold text-sm leading-tight"><?= (int)$property['sleep_capacity'] ?> pers.</p>
+<p class="text-xs text-blue-grey leading-tight"><?= htmlspecialchars(__('booking.capacity'), ENT_QUOTES, 'UTF-8') ?></p>
+<p class="font-bold text-sm leading-tight"><?= (int)$property['sleep_capacity'] ?> <?= htmlspecialchars(__('booking.persons_abbr'), ENT_QUOTES, 'UTF-8') ?></p>
 </div>
 </div>
 <div class="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -493,7 +506,7 @@ Fără imagini
 <i data-lucide="bed-double" class="w-4 h-4 sm:w-5 sm:h-5"></i>
 </div>
 <div class="min-w-0">
-<p class="text-xs text-blue-grey leading-tight">Camere</p>
+<p class="text-xs text-blue-grey leading-tight"><?= htmlspecialchars(__('booking.rooms'), ENT_QUOTES, 'UTF-8') ?></p>
 <p class="font-bold text-sm leading-tight"><?= (int)$property['rooms'] ?></p>
 </div>
 </div>
@@ -502,7 +515,7 @@ Fără imagini
 <i data-lucide="maximize" class="w-4 h-4 sm:w-5 sm:h-5"></i>
 </div>
 <div class="min-w-0">
-<p class="text-xs text-blue-grey leading-tight">Suprafață</p>
+<p class="text-xs text-blue-grey leading-tight"><?= htmlspecialchars(__('booking.area'), ENT_QUOTES, 'UTF-8') ?></p>
 <p class="font-bold text-sm leading-tight"><?= (int)$property['area_sqm'] ?> m²</p>
 </div>
 </div>
@@ -511,7 +524,7 @@ Fără imagini
 
 <!-- DESCRIPTION -->
 <div>
-<h2 class="text-2xl font-bold mb-4">Despre această locuință</h2>
+<h2 class="text-2xl font-bold mb-4"><?= htmlspecialchars(__('booking.about_property'), ENT_QUOTES, 'UTF-8') ?></h2>
 <p class="text-ink/80 leading-relaxed whitespace-pre-line">
 <?= htmlspecialchars($property['description_long'] ?? $property['description'] ?? '', ENT_QUOTES, 'UTF-8') ?>
 </p>
@@ -520,7 +533,7 @@ Fără imagini
 <!-- AMENITIES (icons + labels match admin Facilități & Dotări catalog) -->
 <?php if (!empty($amenities)): ?>
 <div>
-<h2 class="text-2xl font-bold mb-6">Facilități</h2>
+<h2 class="text-2xl font-bold mb-6"><?= htmlspecialchars(__('booking.amenities'), ENT_QUOTES, 'UTF-8') ?></h2>
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
 <?php foreach ($amenities as $a):
     if (!is_string($a) && !is_int($a)) {
@@ -561,7 +574,7 @@ Fără imagini
 <span class="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center text-cta/70 border border-black/8 shrink-0" aria-hidden="true">
 <i data-lucide="map-pin" class="w-5 h-5"></i>
 </span>
-Locație
+<?= htmlspecialchars(__('booking.location'), ENT_QUOTES, 'UTF-8') ?>
 </h2>
 <?php if ($mapIframeSrc !== ''): ?>
 <div class="relative w-full max-w-full overflow-hidden rounded-2xl border border-black/10 bg-surface h-[220px] sm:h-[280px] md:h-[360px] lg:h-[400px]">
@@ -575,14 +588,14 @@ Locație
 </div>
 <?php else: ?>
 <p class="text-blue-grey text-sm py-8 px-4 rounded-2xl border border-black/8 bg-white/60 text-center">
-Adresa nu este disponibilă pentru hartă.
+<?= htmlspecialchars(__('booking.map_unavailable'), ENT_QUOTES, 'UTF-8') ?>
 </p>
 <?php endif; ?>
 </section>
 
 <?php if (!empty($same_area_properties)): ?>
 <section class="mt-10 md:mt-14 min-w-0 max-w-full" aria-labelledby="lh-same-area-heading">
-<h2 id="lh-same-area-heading" class="text-2xl font-bold mb-2">În aceeași zonă</h2>
+<h2 id="lh-same-area-heading" class="text-2xl font-bold mb-2"><?= htmlspecialchars(__('booking.same_area'), ENT_QUOTES, 'UTF-8') ?></h2>
 <?php if ($same_area_label !== ''): ?>
 <p class="text-sm text-blue-grey font-medium mb-6"><?= htmlspecialchars($same_area_label, ENT_QUOTES, 'UTF-8') ?></p>
 <?php endif; ?>
@@ -593,7 +606,7 @@ Adresa nu este disponibilă pentru hartă.
 </div>
 <div class="flex justify-center sm:justify-start">
 <a href="<?= htmlspecialchars($same_area_see_more_url, ENT_QUOTES, 'UTF-8') ?>" class="inline-flex items-center justify-center gap-2 bg-white border-2 border-cta text-cta hover:bg-brand-50 font-bold px-8 py-3.5 rounded-2xl transition-colors shadow-sm">
-Vezi mai mult
+<?= htmlspecialchars(__('booking.see_more'), ENT_QUOTES, 'UTF-8') ?>
 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
 </svg>
@@ -608,10 +621,10 @@ Vezi mai mult
 <div id="lh-booking-mobile-bar" class="lg:hidden fixed bottom-0 inset-x-0 z-[90] border-t border-black/8 bg-white/95 premium-header-blur px-4 sm:px-6 lg:px-8 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgb(0_0_0/0.08)]">
 <div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
 <div class="min-w-0 flex-1">
-<p class="flex flex-nowrap items-baseline gap-x-0.5 min-w-0 whitespace-nowrap text-lg font-black text-ink tabular-nums leading-none"><span class="text-xs sm:text-sm font-bold text-blue-grey shrink-0">De la </span><?= htmlspecialchars($priceFormatted, ENT_QUOTES, 'UTF-8') ?> <span class="text-xs sm:text-sm font-bold text-blue-grey shrink-0">/ noapte</span></p>
+<p class="flex flex-nowrap items-baseline gap-x-0.5 min-w-0 whitespace-nowrap text-lg font-black text-ink tabular-nums leading-none"><span class="text-xs sm:text-sm font-bold text-blue-grey shrink-0"><?= htmlspecialchars(__('booking.mobile_from'), ENT_QUOTES, 'UTF-8') ?> </span><?= htmlspecialchars($priceFormatted, ENT_QUOTES, 'UTF-8') ?> <span class="text-xs sm:text-sm font-bold text-blue-grey shrink-0"><?= htmlspecialchars(__('booking.per_night'), ENT_QUOTES, 'UTF-8') ?></span></p>
 </div>
 <button type="button" id="lh-open-booking-sheet" class="shrink-0 inline-flex items-center justify-center gap-1.5 bg-cta hover:brightness-110 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-black/10 transition-all">
-Rezervă acum
+<?= htmlspecialchars(__('booking.book_now'), ENT_QUOTES, 'UTF-8') ?>
 </button>
 </div>
 </div>
@@ -626,8 +639,8 @@ Rezervă acum
   aria-labelledby="lh-booking-sheet-title"
   aria-hidden="true">
 <div class="shrink-0 flex items-center justify-between gap-3 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-2 border-b border-black/6">
-<h2 id="lh-booking-sheet-title" class="text-lg font-black text-ink tracking-tight">Rezervare</h2>
-<button type="button" id="lh-close-booking-sheet" class="p-2 rounded-xl text-blue-grey hover:bg-brand-100 hover:text-ink transition-colors" aria-label="Închide">
+<h2 id="lh-booking-sheet-title" class="text-lg font-black text-ink tracking-tight"><?= htmlspecialchars(__('booking.booking_title'), ENT_QUOTES, 'UTF-8') ?></h2>
+<button type="button" id="lh-close-booking-sheet" class="p-2 rounded-xl text-blue-grey hover:bg-brand-100 hover:text-ink transition-colors" aria-label="<?= htmlspecialchars(__('booking.close'), ENT_QUOTES, 'UTF-8') ?>">
 <i data-lucide="x" class="w-6 h-6"></i>
 </button>
 </div>
@@ -643,14 +656,14 @@ Rezervă acum
   role="dialog"
   aria-modal="true"
   aria-labelledby="lh-booking-confirm-title">
-<h2 id="lh-booking-confirm-title" class="text-lg font-black text-ink tracking-tight">Confirmă rezervarea</h2>
-<p class="text-sm text-blue-grey font-medium mt-1 mb-4">Verifică datele înainte de trimitere.</p>
+<h2 id="lh-booking-confirm-title" class="text-lg font-black text-ink tracking-tight"><?= htmlspecialchars(__('booking.confirm_title'), ENT_QUOTES, 'UTF-8') ?></h2>
+<p class="text-sm text-blue-grey font-medium mt-1 mb-4"><?= htmlspecialchars(__('booking.confirm_subtitle'), ENT_QUOTES, 'UTF-8') ?></p>
 <dl class="space-y-2 text-sm mb-6">
-<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide">Proprietate</dt><dd id="lh-confirm-property" class="font-bold text-ink"></dd></div>
-<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide">Perioadă</dt><dd id="lh-confirm-period" class="font-medium text-ink"></dd></div>
-<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide">Oaspeți</dt><dd id="lh-confirm-guests" class="font-medium text-ink"></dd></div>
+<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide"><?= htmlspecialchars(__('booking.confirm_property'), ENT_QUOTES, 'UTF-8') ?></dt><dd id="lh-confirm-property" class="font-bold text-ink"></dd></div>
+<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide"><?= htmlspecialchars(__('booking.confirm_period'), ENT_QUOTES, 'UTF-8') ?></dt><dd id="lh-confirm-period" class="font-medium text-ink"></dd></div>
+<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide"><?= htmlspecialchars(__('booking.confirm_guests'), ENT_QUOTES, 'UTF-8') ?></dt><dd id="lh-confirm-guests" class="font-medium text-ink"></dd></div>
 <div id="lh-confirm-price-break" class="hidden border-b border-black/6 pb-2 text-sm space-y-1.5">
-<p class="text-xs font-semibold text-blue-grey uppercase tracking-wide m-0">Subtotal</p>
+<p class="text-xs font-semibold text-blue-grey uppercase tracking-wide m-0"><?= htmlspecialchars(__('booking.subtotal'), ENT_QUOTES, 'UTF-8') ?></p>
 <div id="lh-confirm-base-line" class="font-medium text-ink tabular-nums leading-snug"></div>
 <div id="lh-confirm-discount-line" class="hidden font-medium text-emerald-800 tabular-nums leading-snug"></div>
 <div id="lh-confirm-coupon-line" class="hidden font-medium text-emerald-800 tabular-nums leading-snug"></div>
@@ -658,16 +671,16 @@ Rezervă acum
 <p id="lh-confirm-extra-note" class="hidden text-[10px] text-blue-grey font-medium leading-snug m-0"></p>
 </div>
 <div class="lh-confirm-pricing-row border-b border-black/6 pb-2">
-<dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide lh-confirm-pricing-label">Total de plată:</dt>
+<dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide lh-confirm-pricing-label"><?= htmlspecialchars(__('booking.confirm_total_label'), ENT_QUOTES, 'UTF-8') ?></dt>
 <dd id="lh-confirm-total" class="font-bold text-cta m-0 tabular-nums"></dd>
 </div>
-<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide">Nume</dt><dd id="lh-confirm-name" class="font-medium text-ink break-words"></dd></div>
-<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide">Telefon</dt><dd id="lh-confirm-phone" class="font-medium text-ink"></dd></div>
+<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide"><?= htmlspecialchars(__('booking.confirm_name'), ENT_QUOTES, 'UTF-8') ?></dt><dd id="lh-confirm-name" class="font-medium text-ink break-words"></dd></div>
+<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide"><?= htmlspecialchars(__('booking.confirm_phone'), ENT_QUOTES, 'UTF-8') ?></dt><dd id="lh-confirm-phone" class="font-medium text-ink"></dd></div>
 <div class="flex flex-col gap-0.5 pb-1"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide">Email</dt><dd id="lh-confirm-email" class="font-medium text-ink break-all"></dd></div>
 </dl>
 <div class="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
-<button type="button" id="lh-booking-confirm-back" class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-3.5 rounded-xl font-bold border-2 border-black/10 text-ink hover:bg-brand-50 transition-colors">Înapoi la editare</button>
-<button type="button" id="lh-booking-confirm-submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-cta hover:brightness-110 text-white px-5 py-3.5 rounded-xl font-bold transition-all">Confirm rezervarea</button>
+<button type="button" id="lh-booking-confirm-back" class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-3.5 rounded-xl font-bold border-2 border-black/10 text-ink hover:bg-brand-50 transition-colors"><?= htmlspecialchars(__('booking.confirm_back'), ENT_QUOTES, 'UTF-8') ?></button>
+<button type="button" id="lh-booking-confirm-submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-cta hover:brightness-110 text-white px-5 py-3.5 rounded-xl font-bold transition-all"><?= htmlspecialchars(__('booking.confirm_submit'), ENT_QUOTES, 'UTF-8') ?></button>
 </div>
 </div>
 </div>
@@ -675,10 +688,10 @@ Rezervă acum
 <div id="lh-booking-success-banner" class="lh-booking-success-banner" hidden role="status" aria-live="polite">
 <div class="lh-booking-success-banner__inner">
 <div class="min-w-0 flex-1">
-<strong>Rezervare confirmată</strong>
+<strong><?= htmlspecialchars(__('booking.success_title'), ENT_QUOTES, 'UTF-8') ?></strong>
 <p id="lh-booking-success-text" class="text-blue-grey font-medium"></p>
 </div>
-<button type="button" class="lh-booking-success-banner__close" id="lh-booking-success-close">Închide</button>
+<button type="button" class="lh-booking-success-banner__close" id="lh-booking-success-close"><?= htmlspecialchars(__('booking.success_close'), ENT_QUOTES, 'UTF-8') ?></button>
 </div>
 </div>
 
@@ -689,14 +702,14 @@ Rezervă acum
   hidden
   role="dialog"
   aria-modal="true"
-  aria-label="Galerie imagini mărită"
+  aria-label="<?= htmlspecialchars(__('booking.gallery_aria'), ENT_QUOTES, 'UTF-8') ?>"
   aria-hidden="true">
   <div class="absolute inset-0 z-0 cursor-pointer lh-gallery-lightbox-backdrop" id="lh-gallery-lightbox-backdrop" aria-hidden="true"></div>
   <button
     type="button"
     id="lh-gallery-lightbox-close"
     class="absolute top-3 right-3 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 border border-white/20 transition-colors pointer-events-auto"
-    aria-label="Închide galeria">
+    aria-label="<?= htmlspecialchars(__('booking.gallery_close'), ENT_QUOTES, 'UTF-8') ?>">
     <i data-lucide="x" class="w-6 h-6" aria-hidden="true"></i>
   </button>
   <div class="lh-gallery-lightbox-inner relative z-10 flex flex-1 min-h-0 w-full flex-col pt-14 pb-2 px-2 sm:px-4 pointer-events-none">
@@ -710,19 +723,19 @@ Rezervă acum
         </div>
         <?php endforeach; ?>
       </div>
-      <div class="lh-lb-zoom-tools flex shrink-0 items-center justify-center gap-2 pt-2" role="toolbar" aria-label="Zoom imagine">
+      <div class="lh-lb-zoom-tools flex shrink-0 items-center justify-center gap-2 pt-2" role="toolbar" aria-label="<?= htmlspecialchars(__('booking.zoom_toolbar'), ENT_QUOTES, 'UTF-8') ?>">
         <button
           type="button"
           id="lh-lb-zoom-out"
           class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 border border-white/20 transition-colors"
-          aria-label="Micșorează">
+          aria-label="<?= htmlspecialchars(__('booking.zoom_out'), ENT_QUOTES, 'UTF-8') ?>">
           <i data-lucide="zoom-out" class="w-5 h-5" aria-hidden="true"></i>
         </button>
         <button
           type="button"
           id="lh-lb-zoom-in"
           class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 border border-white/20 transition-colors"
-          aria-label="Mărește">
+          aria-label="<?= htmlspecialchars(__('booking.zoom_in'), ENT_QUOTES, 'UTF-8') ?>">
           <i data-lucide="zoom-in" class="w-5 h-5" aria-hidden="true"></i>
         </button>
       </div>
@@ -735,8 +748,17 @@ Rezervă acum
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ro.js"></script>
+<?php
+$lhPdFpJs = match (lh_current_locale()) {
+    'en' => 'en',
+    'ru' => 'ru',
+    default => 'ro',
+};
+if ($lhPdFpJs !== 'en'): ?>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/<?= htmlspecialchars($lhPdFpJs, ENT_QUOTES, 'UTF-8') ?>.js"></script>
+<?php endif; ?>
 
+<?php require_once __DIR__ . '/includes/i18n_js.php'; lh_i18n_script_tags(); ?>
 <script>
 var ajaxBookedDates = <?= json_encode(lh_public_url('ajax/get_booked_dates.php'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 var ajaxCreateBooking = <?= json_encode(lh_public_url('ajax/create_booking.php'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -995,9 +1017,9 @@ function lhEffectiveMinStay(checkInYmd, checkOutYmd) {
 
 function lhNightsLabel(n) {
   n = parseInt(String(n), 10) || 0;
-  if (n === 1) return '1 noapte';
-  if (n < 1) return '0 nopți';
-  return String(n) + ' nopți';
+  if (n === 1) return typeof lhT === 'function' ? lhT('booking.night_one') : '1';
+  if (n < 1) return typeof lhT === 'function' ? lhT('booking.nights_zero') : '0';
+  return typeof lhT === 'function' ? lhT('booking.nights_count', { n: String(n) }) : String(n);
 }
 
 function lhMinStayTooShortMsg(eff) {
@@ -1006,9 +1028,9 @@ function lhMinStayTooShortMsg(eff) {
     m = lhMinStayBase;
   }
   if (m === 1) {
-    return 'Check-out trebuie să fie după ziua de check-in (minim 1 noapte).';
+    return typeof lhT === 'function' ? lhT('booking.checkout_after_checkin') : '';
   }
-  return 'Sejurul minim pentru această proprietate este de ' + m + ' nopți. Prelungește perioada.';
+  return typeof lhT === 'function' ? lhT('booking.min_stay_property', { n: String(m) }) : String(m);
 }
 
 function lhIsWeekendNightStartYmd(ymd) {
@@ -1093,12 +1115,21 @@ function lhBookingStayDiscountResult(nights, subtotal, rules) {
 function lhFormatBaseStayLine(nights, baseEuro, nightlyUniform, uniformRate) {
   if (nights < 1) return '';
   var btxt = baseEuro.toFixed(0) + lhCurrencySuffix();
+  var nword = nights === 1 ? lhT('booking.night_word') : lhT('booking.nights_word');
   if (nightlyUniform && uniformRate != null) {
-    var nword = nights === 1 ? 'noapte' : 'nopți';
-    return nights + ' ' + nword + ' × ' + uniformRate.toFixed(0) + lhCurrencySuffix() + ' = ' + btxt;
+    return lhT('booking.base_stay_uniform', {
+      n: nights,
+      nword: nword,
+      rate: uniformRate.toFixed(0) + lhCurrencySuffix(),
+      total: btxt,
+    });
   }
   var avg = baseEuro / nights;
-  return nights + ' nopți × ' + avg.toFixed(0) + lhCurrencySuffix() + ' medie/noapte = ' + btxt;
+  return lhT('booking.base_stay_avg', {
+    n: nights,
+    avg: avg.toFixed(0) + lhCurrencySuffix(),
+    total: btxt,
+  });
 }
 
 function lhFormatDiscountDisplayLine(discountEuro, rule) {
@@ -1109,33 +1140,27 @@ function lhFormatDiscountDisplayLine(discountEuro, rule) {
   var mn = parseInt(String(rule.min_nights), 10) || 0;
   var dtxt = '−' + discountEuro.toFixed(0) + lhCurrencySuffix();
   var overPhrase =
-    mn < 1 ? '' : ' (peste ' + mn + ' ' + (mn === 1 ? 'noapte' : 'nopți') + ')';
+    mn < 1 ? '' : lhT('booking.over_nights', { n: mn, word: mn === 1 ? lhT('booking.night_word') : lhT('booking.nights_word') });
   if (unit === 'percent') {
     var rounded = Math.round(val);
     var ptxt = Math.abs(val - rounded) < 1e-6 ? String(rounded) : String(val);
-    return 'Se aplică ' + ptxt + '%' + overPhrase + ': ' + dtxt;
+    return lhT('booking.discount_percent', { pct: ptxt, over: overPhrase, amount: dtxt });
   }
-  return 'Reducere sejur fixă' + overPhrase + ': ' + dtxt;
+  return lhT('booking.discount_fixed', { over: overPhrase, amount: dtxt });
 }
 
 function lhFormatExtraGuestMathLine(overGuests, pricePerGuest, nights, extraEuro) {
   if (overGuests < 1 || pricePerGuest <= 0 || nights < 1 || extraEuro <= 0.005) return '';
-  var oword = overGuests === 1 ? 'oaspete' : 'oaspeți';
-  return (
-    overGuests +
-    ' ' +
-    oword +
-    ' × ' +
-    pricePerGuest.toFixed(0) +
-    lhCurrencySuffix() +
-    ' × ' +
-    nights +
-    ' ' +
-    (nights === 1 ? 'noapte' : 'nopți') +
-    ' = ' +
-    extraEuro.toFixed(0) +
-    lhCurrencySuffix()
-  );
+  var gword = overGuests === 1 ? lhT('booking.guest_singular') : lhT('booking.guests_plural');
+  var nword = nights === 1 ? lhT('booking.night_word') : lhT('booking.nights_word');
+  return lhT('booking.extra_guest_math', {
+    over: overGuests,
+    guests: gword,
+    price: pricePerGuest.toFixed(0) + lhCurrencySuffix(),
+    n: nights,
+    nword: nword,
+    total: extraEuro.toFixed(0) + lhCurrencySuffix(),
+  });
 }
 
 function lhBookingLengthDiscountEuro(nights, subtotal, rules) {
@@ -1154,17 +1179,13 @@ function lhExtraGuestNoticeText(guestsInt) {
     return '';
   }
   var over = g - cfg.guestsIncluded;
-  return (
-    'Se aplică +' +
-    cfg.extraGuestPrice.toFixed(0) +
-    lhCurrencySuffix() +
-    ' / oaspete / noapte pentru ' +
-    over +
-    (over === 1 ? ' oaspete' : ' oaspeți') +
-    ' peste limita de ' +
-    cfg.guestsIncluded +
-    ' incluși în preț.'
-  );
+  var gword = over === 1 ? lhT('booking.guest_singular') : lhT('booking.guests_plural');
+  return lhT('booking.extra_guest_notice', {
+    price: cfg.extraGuestPrice.toFixed(0) + lhCurrencySuffix(),
+    over: over,
+    guests: gword,
+    included: cfg.guestsIncluded,
+  });
 }
 
 function lhBookingStayPricingEuro(checkInYmd, checkOutYmd, guestsInt) {
@@ -1276,6 +1297,7 @@ function lhRunBookingPricePreview(cinYmd, coutYmd, guestsInt, couponRaw) {
     check_out: coutYmd,
     guests: String(guestsInt),
     coupon_code: couponRaw,
+    locale: window.lhLocale || 'ro',
   });
   var fetchOpts = {
     method: 'POST',
@@ -1343,7 +1365,7 @@ function lhApplyCouponLayerToTotals(pricingSync, cinYmd, coutYmd, nights) {
   var key = lhPricePreviewSyncKey(cinYmd, coutYmd, gInt, coup);
   if (!lhLastPricePreview || lhLastPricePreview._syncKey !== key) {
     if (hintEl) {
-      hintEl.textContent = 'Se verifică codul…';
+      hintEl.textContent = typeof lhT === 'function' ? lhT('booking.coupon_checking') : '';
       hintEl.classList.remove('hidden');
       hintEl.className =
         'text-xs text-blue-grey font-medium mb-3 leading-snug';
@@ -1622,7 +1644,7 @@ function lhSetLoading(isLoading) {
   if (!btn || !label || !spin) return;
   btn.disabled = !!isLoading;
   if (isLoading) {
-    label.textContent = 'Se procesează…';
+    label.textContent = typeof lhT === 'function' ? lhT('booking.processing') : '';
     spin.classList.remove('hidden');
   } else {
     spin.classList.add('hidden');
@@ -1694,7 +1716,11 @@ function lhOpenBookingConfirmModal(payload) {
     fpCheckIn.formatDate(payload.dateFrom, 'd.m.Y') + ' → ' + fpCheckOut.formatDate(payload.dateTo, 'd.m.Y');
   var gStr = String(payload.guests);
   var gDisp =
-    gStr === '6' ? '6+ oaspeți' : gStr === '1' ? '1 oaspete' : gStr + ' oaspeți';
+    gStr === '6'
+      ? '6+ ' + lhT('booking.guests_plural')
+      : gStr === '1'
+        ? '1 ' + lhT('booking.guest_singular')
+        : gStr + ' ' + lhT('booking.guests_plural');
   document.getElementById('lh-confirm-guests').textContent = gDisp;
   var breakWrap = document.getElementById('lh-confirm-price-break');
   var cBase = document.getElementById('lh-confirm-base-line');
@@ -1770,12 +1796,9 @@ function lhShowBookingSuccessBanner(bookingId, email) {
   var banner = document.getElementById('lh-booking-success-banner');
   var text = document.getElementById('lh-booking-success-text');
   if (!banner || !text) return;
-  text.textContent =
-    'Verifică emailul ' +
-    email +
-    ' pentru detaliile rezervării. Număr rezervare: #' +
-    bookingId +
-    '.';
+  text.textContent = typeof lhT === 'function'
+    ? lhT('booking.success_banner', { email: email, id: String(bookingId) })
+    : email;
   banner.removeAttribute('hidden');
   requestAnimationFrame(function () {
     banner.classList.add('lh-booking-success-banner--visible');
@@ -1816,6 +1839,7 @@ function lhExecuteBookingRequest(payload) {
       check_out: payload.checkout,
       guests: payload.guests,
       coupon_code: payload.couponCode || '',
+      locale: window.lhLocale || 'ro',
     }),
   })
     .then(function (r) {
@@ -1829,29 +1853,29 @@ function lhExecuteBookingRequest(payload) {
           msg.innerHTML = '';
           msg.className = 'text-xs text-center mt-3 text-blue-grey';
         }
-        if (label) label.textContent = 'Confirmată';
+        if (label) label.textContent = typeof lhT === 'function' ? lhT('booking.confirmed') : '';
         btn.disabled = true;
         lhShowBookingSuccessBanner(resp.booking_id, payload.guestEmail);
       } else {
         if (msg) {
-          msg.innerHTML = resp.message || 'A apărut o eroare.';
+          msg.innerHTML = resp.message || (typeof lhT === 'function' ? lhT('booking.generic_error') : '');
           msg.className = 'text-xs text-center mt-3 font-semibold text-red-800';
         }
-        if (label) label.textContent = 'Rezervă acum';
+        if (label) label.textContent = <?= json_encode(__('booking.book_now'), JSON_UNESCAPED_UNICODE) ?>;
         btn.disabled = false;
-        lhShowToast(resp.message || 'A apărut o eroare.', 'error');
+        lhShowToast(resp.message || (typeof lhT === 'function' ? lhT('booking.generic_error') : ''), 'error');
       }
     })
     .catch(function () {
       lhSetLoading(false);
       var label = document.getElementById('reserveBtnLabel');
       if (msg) {
-        msg.innerHTML = 'Eroare de rețea. Încearcă din nou.';
+        msg.innerHTML = typeof lhT === 'function' ? lhT('errors.network') : '';
         msg.className = 'text-xs text-center mt-3 font-semibold text-red-800';
       }
-      if (label) label.textContent = 'Rezervă acum';
+      if (label) label.textContent = <?= json_encode(__('booking.book_now'), JSON_UNESCAPED_UNICODE) ?>;
       btn.disabled = false;
-      lhShowToast('Eroare de rețea. Încearcă din nou.', 'error');
+      lhShowToast(typeof lhT === 'function' ? lhT('errors.network') : '', 'error');
     });
 }
 
@@ -2019,12 +2043,13 @@ function lhBookingOnDatesChanged() {
   lhSyncDateRangeInstructionVisibility();
 }
 
-var lhBookingFpLocale =
-  typeof flatpickr !== 'undefined' &&
-  flatpickr.l10ns &&
-  flatpickr.l10ns.ro
-    ? Object.assign({}, flatpickr.l10ns.ro, { firstDayOfWeek: 1 })
-    : { firstDayOfWeek: 1 };
+var lhBookingFpLocale = (function () {
+  var loc = <?= json_encode($lhPdFpJs, JSON_UNESCAPED_UNICODE) ?>;
+  if (typeof flatpickr !== 'undefined' && flatpickr.l10ns && flatpickr.l10ns[loc]) {
+    return Object.assign({}, flatpickr.l10ns[loc], { firstDayOfWeek: 1 });
+  }
+  return { firstDayOfWeek: 1 };
+})();
 
 fpCheckOut = flatpickr('#booking-check-out', {
   locale: lhBookingFpLocale,
@@ -2195,9 +2220,9 @@ var coutD = fpCheckOut.selectedDates[0];
 var msg=document.getElementById('availabilityMsg');
 
 if(!cinD || !coutD){
-msg.innerHTML="Selectează perioada.";
+msg.innerHTML=typeof lhT==='function'?lhT('booking.select_period'):'';
 msg.className="text-xs text-center mt-3 font-semibold text-red-800";
-lhShowToast('Selectează perioada.', 'error');
+lhShowToast(typeof lhT==='function'?lhT('booking.select_period'):'', 'error');
 return;
 }
 
@@ -2205,14 +2230,14 @@ var checkin=fpCheckIn.formatDate(cinD,"Y-m-d");
 var checkout=fpCheckOut.formatDate(coutD,"Y-m-d");
 var nightsEarly=(coutD-cinD)/86400000;
 if(checkout<=checkin||nightsEarly<1){
-msg.innerHTML="Alege cel puțin o noapte: check-out în ziua următoare sau mai târziu.";
+msg.innerHTML=typeof lhT==='function'?lhT('booking.min_one_night'):'';
 msg.className="text-xs text-center mt-3 font-semibold text-red-800";
-lhShowToast('Minim o noapte: check-out după ziua de check-in.', 'error');
+lhShowToast(typeof lhT==='function'?lhT('search.min_night_hint'):'', 'error');
 return;
 }
 var effBtn = lhEffectiveMinStay(checkin, checkout);
 if(nightsEarly < effBtn){
-msg.innerHTML = effBtn === 1 ? 'Perioada trebuie să includă cel puțin o noapte.' : 'Sejur minim: ' + effBtn + ' nopți. Prelungește perioada.';
+msg.innerHTML = effBtn === 1 ? lhT('api.min_one_night') : lhT('booking.min_stay_extend', { n: effBtn });
 msg.className="text-xs text-center mt-3 font-semibold text-red-800";
 lhShowToast(lhMinStayTooShortMsg(effBtn), 'error');
 return;
@@ -2223,23 +2248,23 @@ var guestPhone=document.getElementById('guestPhone').value.trim();
 var guestEmail=document.getElementById('guestEmail').value.trim();
 
 if(!guestName){
-msg.innerHTML="Completează numele.";
+msg.innerHTML=typeof lhT==='function'?lhT('booking.fill_name'):'';
 msg.className="text-xs text-center mt-3 font-semibold text-red-800";
-lhShowToast('Completează numele.', 'error');
+lhShowToast(typeof lhT==='function'?lhT('booking.fill_name'):'', 'error');
 return;
 }
 
 if(!guestPhone){
-msg.innerHTML="Completează numărul de telefon.";
+msg.innerHTML=typeof lhT==='function'?lhT('booking.fill_phone'):'';
 msg.className="text-xs text-center mt-3 font-semibold text-red-800";
-lhShowToast('Completează telefonul.', 'error');
+lhShowToast(typeof lhT==='function'?lhT('booking.fill_phone'):'', 'error');
 return;
 }
 
 if(!guestEmail){
-msg.innerHTML="Completează emailul.";
+msg.innerHTML=typeof lhT==='function'?lhT('booking.fill_email'):'';
 msg.className="text-xs text-center mt-3 font-semibold text-red-800";
-lhShowToast('Completează emailul.', 'error');
+lhShowToast(typeof lhT==='function'?lhT('booking.fill_email'):'', 'error');
 return;
 }
 
@@ -2250,9 +2275,9 @@ var pr = nights > 0 ? lhBookingStayPricingEuro(checkin, checkout, gInt) : { tota
 
 var coupReserve = lhGetCouponRawInput();
 if (coupReserve !== '' && !lhPricePreviewReadyForSubmit(checkin, checkout, guests)) {
-  msg.innerHTML = 'Cuponul este verificat automat: așteaptă o clipă sau corectează codul.';
+  msg.innerHTML = typeof lhT==='function'?lhT('booking.coupon_wait'):'';
   msg.className = 'text-xs text-center mt-3 font-semibold text-red-800';
-  lhShowToast('Verifică codul promoțional sau lasă câmpul gol.', 'error');
+  lhShowToast(typeof lhT==='function'?lhT('booking.coupon_fix'):'', 'error');
   return;
 }
 var totalEuroRes = pr.total;

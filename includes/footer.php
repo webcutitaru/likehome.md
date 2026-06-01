@@ -16,15 +16,15 @@ $lh_footer_city = lh_site_contact_city();
           </svg>
         </span>
         <p class="text-sm text-white leading-relaxed pt-0.5 max-w-md">
-          Locuințe premium cu rezervare directă. Transparență, calitate și suport dedicat înainte și în timpul sejurului.
+          <?= htmlspecialchars(__('footer.tagline'), ENT_QUOTES, 'UTF-8') ?>
         </p>
       </div>
     </div>
 
     <!-- Navigation -->
     <div class="md:col-span-4 space-y-4">
-      <h4 class="text-white font-semibold text-xs uppercase tracking-[0.22em]">Navigare</h4>
-      <nav class="flex flex-col gap-2.5 text-sm" aria-label="Footer">
+      <h4 class="text-white font-semibold text-xs uppercase tracking-[0.22em]"><?= htmlspecialchars(__('nav.footer'), ENT_QUOTES, 'UTF-8') ?></h4>
+      <nav class="flex flex-col gap-2.5 text-sm" aria-label="<?= htmlspecialchars(__('nav.footer'), ENT_QUOTES, 'UTF-8') ?>">
         <?php foreach ($lh_footer_nav as $fItem):
             $fCurrent = lh_nav_is_current($fItem['file']);
             $fClass = $fCurrent ? 'text-white font-semibold hover:text-zinc-200 transition-colors' : 'text-white hover:text-zinc-200 transition-colors';
@@ -35,18 +35,18 @@ $lh_footer_city = lh_site_contact_city();
             <?= $fCurrent ? 'aria-current="page"' : '' ?>
           ><?= htmlspecialchars($fItem['label'], ENT_QUOTES, 'UTF-8') ?></a>
         <?php endforeach; ?>
-        <a href="<?= htmlspecialchars(lh_public_url('index.php#search-bar'), ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors pt-1">Rezervă (caută date)</a>
+        <a href="<?= htmlspecialchars(lh_locale_url('index.php#search-bar'), ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors pt-1"><?= htmlspecialchars(__('nav.book_footer'), ENT_QUOTES, 'UTF-8') ?></a>
       </nav>
     </div>
 
     <!-- Contact -->
     <div class="md:col-span-3 space-y-4">
-      <h4 class="text-white font-semibold text-xs uppercase tracking-[0.22em]">Contact</h4>
+      <h4 class="text-white font-semibold text-xs uppercase tracking-[0.22em]"><?= htmlspecialchars(__('footer.contact'), ENT_QUOTES, 'UTF-8') ?></h4>
       <div class="flex flex-col gap-1 text-sm">
-        <span class="text-white text-xs uppercase tracking-wide">Email</span>
+        <span class="text-white text-xs uppercase tracking-wide"><?= htmlspecialchars(__('footer.email'), ENT_QUOTES, 'UTF-8') ?></span>
         <a href="mailto:<?= htmlspecialchars($lh_footer_email, ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors font-medium"><?= htmlspecialchars($lh_footer_email, ENT_QUOTES, 'UTF-8') ?></a>
 
-        <span class="text-white text-xs uppercase tracking-wide mt-4">Locație</span>
+        <span class="text-white text-xs uppercase tracking-wide mt-4"><?= htmlspecialchars(__('footer.location'), ENT_QUOTES, 'UTF-8') ?></span>
         <span class="text-white"><?= htmlspecialchars($lh_footer_city, ENT_QUOTES, 'UTF-8') ?></span>
       </div>
     </div>
@@ -55,22 +55,33 @@ $lh_footer_city = lh_site_contact_city();
 
   <div class="border-t border-white/10">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-white">
-      <div>© <?php echo date('Y'); ?> Like HOME. Toate drepturile rezervate.</div>
+      <div>© <?php echo date('Y'); ?> Like HOME. <?= htmlspecialchars(__('footer.rights'), ENT_QUOTES, 'UTF-8') ?></div>
       <div class="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 sm:gap-x-8">
-        <a href="<?= htmlspecialchars(lh_public_url('terms.php'), ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors">Termeni</a>
-        <a href="<?= htmlspecialchars(lh_public_url('privacy.php'), ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors">Confidențialitate</a>
+        <a href="<?= htmlspecialchars(lh_locale_url('terms.php'), ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors"><?= htmlspecialchars(__('footer.terms'), ENT_QUOTES, 'UTF-8') ?></a>
+        <a href="<?= htmlspecialchars(lh_locale_url('privacy.php'), ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors"><?= htmlspecialchars(__('footer.privacy'), ENT_QUOTES, 'UTF-8') ?></a>
         <button type="button" id="lh-footer-cookie-settings" class="text-white hover:text-zinc-200 transition-colors bg-transparent border-0 cursor-pointer p-0 text-xs font-inherit underline decoration-white/30 underline-offset-2">
-          Preferințe cookie-uri
+          <?= htmlspecialchars(__('footer.cookies'), ENT_QUOTES, 'UTF-8') ?>
         </button>
       </div>
     </div>
   </div>
 </footer>
 <?php require_once __DIR__ . '/cookie_banner.php'; ?>
+<?php
+$lhFpLocale = lh_current_locale();
+$lhFpLocaleJs = match ($lhFpLocale) {
+    'en' => 'en',
+    'ru' => 'ru',
+    default => 'ro',
+};
+?>
 <!-- Flatpickr JS -->
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <!-- Flatpickr Romanian locale (opțional) -->
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ro.js"></script>
+<?php if ($lhFpLocaleJs !== 'en'): ?>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/<?= htmlspecialchars($lhFpLocaleJs, ENT_QUOTES, 'UTF-8') ?>.js"></script>
+<?php endif; ?>
+  <script>window.lhFlatpickrLocale = <?= json_encode($lhFpLocaleJs, JSON_UNESCAPED_UNICODE) ?>;</script>
+<?php require_once __DIR__ . '/i18n_js.php'; lh_i18n_script_tags(); ?>
 
   <!-- Scripts proprii -->
   <script src="<?= htmlspecialchars(lh_public_url('assets/js/scripts.js'), ENT_QUOTES, 'UTF-8') ?>"></script>

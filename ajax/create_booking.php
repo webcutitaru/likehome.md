@@ -8,7 +8,10 @@ require_once __DIR__ . '/../includes/booking_pricing.php';
 require_once __DIR__ . '/../includes/coupons.php';
 require_once __DIR__ . '/../includes/rate_limit.php';
 require_once __DIR__ . '/../includes/booking_notifications.php';
+require_once __DIR__ . '/../includes/booking_locale.php';
 require_once __DIR__ . '/../includes/booking_guest_email_bodies.php';
+
+$bookingLocale = lh_resolve_request_locale();
 
 $admin_notification_email = lh_booking_resolve_admin_notification_email();
 
@@ -16,6 +19,10 @@ $telegram_bot_token = defined('TELEGRAM_BOT_TOKEN') ? trim((string) TELEGRAM_BOT
 $telegram_chat_id   = defined('TELEGRAM_CHAT_ID') ? trim((string) TELEGRAM_CHAT_ID) : '';
 
 function fail($message, $code = 400) {
+    global $bookingLocale;
+    if (is_string($message) && str_starts_with($message, 'api.')) {
+        $message = lh_translate($message, [], $bookingLocale ?? lh_default_locale());
+    }
     http_response_code($code);
     echo json_encode([
         'success' => false,
@@ -24,24 +31,28 @@ function fail($message, $code = 400) {
     exit;
 }
 
-function fail_booking_tx(PDO $pdo, string $message, int $code = 400): void {
+function fail_booking_tx(PDO $pdo, string $message, int $code = 400, array $replace = []): void {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
+    }
+    global $bookingLocale;
+    if (is_string($message) && str_starts_with($message, 'api.')) {
+        $message = lh_translate($message, $replace, $bookingLocale ?? lh_default_locale());
     }
     fail($message, $code);
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    fail('Metodă invalidă.', 405);
+    fail('api.method_invalid', 405);
 }
 
 if (!lh_csrf_verify_post()) {
-    fail('Sesiune invalidă. Reîncarcă pagina și încearcă din nou.', 403);
+    fail('api.session_invalid', 403);
 }
 
 $honeypot = trim((string) ($_POST['company'] ?? ''));
 if ($honeypot !== '') {
-    fail('Cerere invalidă.', 400);
+    fail('api.request_invalid', 400);
 }
 
 $property_id = filter_input(INPUT_POST, 'property_id', FILTER_VALIDATE_INT);
@@ -53,7 +64,9 @@ $check_out   = trim($_POST['check_out'] ?? '');
 $guests      = filter_input(INPUT_POST, 'guests', FILTER_VALIDATE_INT);
 $coupon_code_raw = trim((string) ($_POST['coupon_code'] ?? ''));
 
-if (!$property_id) fail('Proprietate invalidă.');
+if (!$property_id) {
+    fail('api.property_invalid');
+}
 
 $clientIp = $_SERVER['REMOTE_ADDR'] ?? '0';
 $rateMax = (int) lh_env('BOOKING_RATE_LIMIT_MAX', '10');
@@ -61,32 +74,40 @@ $rateWindow = (int) lh_env('BOOKING_RATE_LIMIT_WINDOW', '900');
 if ($rateMax > 0 && $rateWindow > 0) {
     $bucket = 'booking:' . $clientIp;
     if (lh_rate_limit_exceeded($bucket, $rateMax, $rateWindow)) {
-        fail('Prea multe cereri de rezervare. Încearcă mai târziu.', 429);
+        fail('api.rate_limit', 429);
     }
     $propBucket = 'booking:' . $clientIp . ':p' . $property_id;
     $perPropMax = (int) lh_env('BOOKING_RATE_LIMIT_PER_PROPERTY_MAX', '0');
     $perPropWindow = (int) lh_env('BOOKING_RATE_LIMIT_PER_PROPERTY_WINDOW', (string) $rateWindow);
     if ($perPropMax > 0 && $perPropWindow > 0 && lh_rate_limit_exceeded($propBucket, $perPropMax, $perPropWindow)) {
-        fail('Prea multe cereri pentru această proprietate. Încearcă mai târziu.', 429);
+        fail('api.rate_limit_property', 429);
     }
 }
 
-if ($guest_name === '') fail('Completează numele.');
-if ($guest_phone === '') fail('Completează numărul de telefon.');
-if (!filter_var($guest_email, FILTER_VALIDATE_EMAIL)) fail('Email invalid.');
-if (!$guests || $guests < 1) fail('Număr invalid de oaspeți.');
+if ($guest_name === '') {
+    fail('api.name_required');
+}
+if ($guest_phone === '') {
+    fail('api.phone_required');
+}
+if (!filter_var($guest_email, FILTER_VALIDATE_EMAIL)) {
+    fail('api.email_invalid');
+}
+if (!$guests || $guests < 1) {
+    fail('api.guests_invalid');
+}
 
 $checkInDt  = DateTime::createFromFormat('Y-m-d', $check_in);
 $checkOutDt = DateTime::createFromFormat('Y-m-d', $check_out);
 
 if (!$checkInDt || $checkInDt->format('Y-m-d') !== $check_in) {
-    fail('Check-in invalid.');
+    fail('api.checkin_invalid');
 }
 if (!$checkOutDt || $checkOutDt->format('Y-m-d') !== $check_out) {
-    fail('Check-out invalid.');
+    fail('api.checkout_invalid');
 }
 if ($checkOutDt <= $checkInDt) {
-    fail('Check-out trebuie să fie cel puțin în ziua următoare față de check-in (minim o noapte).');
+    fail('api.dates_order');
 }
 
 try {
@@ -99,17 +120,17 @@ try {
     $property = $stmt->fetch();
 
     if (!$property) {
-        fail_booking_tx($pdo, 'Proprietatea nu există.', 404);
+        fail_booking_tx($pdo, 'api.property_not_found', 404);
     }
 
     if (!empty($property['sleep_capacity']) && $guests > (int)$property['sleep_capacity']) {
-        fail_booking_tx($pdo, 'Numărul de oaspeți depășește capacitatea proprietății.');
+        fail_booking_tx($pdo, 'api.guests_over_capacity');
     }
 
     $nightsForMin = (int) $checkOutDt->diff($checkInDt)->days;
     $effMinStay = lh_booking_effective_min_stay($property, $check_in, $check_out);
     if ($nightsForMin < $effMinStay) {
-        fail_booking_tx($pdo, 'Sejurul minim este de ' . $effMinStay . ' nopți.');
+        fail_booking_tx($pdo, 'api.min_stay', 400, ['n' => (string) $effMinStay]);
     }
 
     $lockBlocks = $pdo->prepare(
@@ -131,12 +152,12 @@ try {
     ]);
 
     if ((int)$overlap->fetchColumn() > 0) {
-        fail_booking_tx($pdo, 'Perioada selectată nu mai este disponibilă.');
+        fail_booking_tx($pdo, 'api.period_unavailable');
     }
 
     $nights = $checkOutDt->diff($checkInDt)->days;
     if ($nights < 1) {
-        fail_booking_tx($pdo, 'Sejurul trebuie să includă cel puțin o noapte.');
+        fail_booking_tx($pdo, 'api.min_one_night');
     }
     $pricing = lh_booking_stay_total($property, $check_in, $check_out, (int) $guests);
     $total_price = $pricing['total'];
@@ -155,7 +176,7 @@ try {
             true
         );
         if ($resolved['error'] !== null) {
-            fail_booking_tx($pdo, $resolved['error'], 400);
+            fail_booking_tx($pdo, lh_coupon_translate_error((string) $resolved['error'], $bookingLocale), 400);
         }
         $cRow = $resolved['coupon'];
         if ($cRow !== null) {
@@ -166,37 +187,31 @@ try {
         }
     }
 
-    $insertBooking = $pdo->prepare("
-        INSERT INTO bookings (
-            property_id,
-            guest_name,
-            guest_phone,
-            guest_email,
-            check_in,
-            check_out,
-            guests,
-            total_price,
-            coupon_id,
-            coupon_code,
-            coupon_discount_amount,
-            status
+    $insertBooking = $pdo->prepare(
+        lh_bookings_has_locale_column($pdo)
+            ? "INSERT INTO bookings (
+            property_id, guest_name, guest_phone, guest_email,
+            check_in, check_out, guests, total_price,
+            coupon_id, coupon_code, coupon_discount_amount,
+            status, locale
         ) VALUES (
-            :property_id,
-            :guest_name,
-            :guest_phone,
-            :guest_email,
-            :check_in,
-            :check_out,
-            :guests,
-            :total_price,
-            :coupon_id,
-            :coupon_code,
-            :coupon_discount_amount,
-            'confirmed'
-        )
-    ");
+            :property_id, :guest_name, :guest_phone, :guest_email,
+            :check_in, :check_out, :guests, :total_price,
+            :coupon_id, :coupon_code, :coupon_discount_amount,
+            'confirmed', :locale
+        )"
+            : "INSERT INTO bookings (
+            property_id, guest_name, guest_phone, guest_email,
+            check_in, check_out, guests, total_price,
+            coupon_id, coupon_code, coupon_discount_amount, status
+        ) VALUES (
+            :property_id, :guest_name, :guest_phone, :guest_email,
+            :check_in, :check_out, :guests, :total_price,
+            :coupon_id, :coupon_code, :coupon_discount_amount, 'confirmed'
+        )"
+    );
 
-    $insertBooking->execute([
+    $insertParams = [
         ':property_id' => $property_id,
         ':guest_name'  => $guest_name,
         ':guest_phone' => $guest_phone,
@@ -208,7 +223,12 @@ try {
         ':coupon_id' => $coupon_id_ins,
         ':coupon_code' => $coupon_code_ins,
         ':coupon_discount_amount' => $coupon_discount_ins,
-    ]);
+    ];
+    if (lh_bookings_has_locale_column($pdo)) {
+        $insertParams[':locale'] = $bookingLocale;
+    }
+
+    $insertBooking->execute($insertParams);
 
     $booking_id = (int)$pdo->lastInsertId();
 
@@ -241,6 +261,10 @@ try {
     $pdo->commit();
 
     $property_title = $property['title'] ?? ('Property #' . $property_id);
+    if (function_exists('lh_property_apply_locale')) {
+        $property = lh_property_apply_locale($property, $pdo, $bookingLocale);
+        $property_title = $property['title'] ?? $property_title;
+    }
 
     $admin_subject = 'Rezervare nouă #' . $booking_id . ' - ' . $property_title;
     $admin_message = "Ai primit o rezervare nouă pe site.\n\n"
@@ -291,7 +315,7 @@ try {
         error_log('create_booking notification skipped: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not configured');
     }
 
-    $client_subject = 'Confirmare rezervare — Like Home';
+    $client_subject = lh_translate('email.confirm_subject', [], $bookingLocale);
     $guestBodyCtx = [
         'guest_name' => $guest_name,
         'property_title' => $property_title,
@@ -300,6 +324,7 @@ try {
         'guests' => (int) $guests,
         'total_price' => (float) $total_price,
         'booking_id' => (int) $booking_id,
+        'locale' => $bookingLocale,
     ];
     if ($coupon_discount_ins > 0.004 && $coupon_code_ins !== null && trim((string) $coupon_code_ins) !== '') {
         $guestBodyCtx['coupon_code'] = (string) $coupon_code_ins;
@@ -314,7 +339,7 @@ try {
 
     echo json_encode([
         'success' => true,
-        'message' => 'Rezervarea a fost confirmată cu succes.',
+        'message' => lh_translate('api.booking_success', [], $bookingLocale),
         'booking_id' => $booking_id,
         'total_price' => $total_price,
     ], JSON_UNESCAPED_UNICODE);
@@ -325,5 +350,5 @@ try {
         $pdo->rollBack();
     }
     error_log('create_booking error: ' . $e->getMessage());
-    fail('A apărut o eroare. Încearcă din nou mai târziu.', 500);
+    fail('api.server_error', 500);
 }

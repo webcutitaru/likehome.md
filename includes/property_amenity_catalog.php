@@ -107,7 +107,14 @@ if (!function_exists('lh_property_amenity_resolve')) {
         }
         $flat = lh_property_amenity_flat_map();
         if (isset($flat[$stored])) {
-            return $flat[$stored];
+            $info = $flat[$stored];
+            $labelKey = 'amenity.' . $stored;
+            $translated = __($labelKey);
+            if ($translated !== $labelKey) {
+                return [$translated, $info[1]];
+            }
+
+            return $info;
         }
         foreach ($flat as $info) {
             if ($info[0] === $stored) {
