@@ -389,7 +389,7 @@ $lh_str_cut = static function (string $s, int $len): string {
 
   <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center gap-3 mt-4 md:mt-5">
     <a
-      href="https://www.instagram.com/like.home.e/"
+      href="https://www.instagram.com/likehome.md/"
       target="_blank"
       rel="noopener noreferrer"
       class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold border-2 border-black/[0.08] text-ink bg-white hover:bg-black/[0.03] transition-colors shadow-sm shadow-black/[0.04]"
