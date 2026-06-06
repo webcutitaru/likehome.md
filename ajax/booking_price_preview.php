@@ -9,6 +9,7 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/booking_pricing.php';
 require_once __DIR__ . '/../includes/coupons.php';
 require_once __DIR__ . '/../includes/rate_limit.php';
+require_once __DIR__ . '/../includes/booking_payment.php';
 
 $previewLocale = lh_resolve_request_locale();
 
@@ -103,7 +104,8 @@ try {
         }
     }
 
-    $total = max(0.0, (float) $pricing['total'] - $coupon_discount);
+    $subtotal = max(0.0, (float) $pricing['total'] - $coupon_discount);
+    $payTotals = lh_booking_payment_totals($subtotal);
 
     echo json_encode([
         'success' => true,
@@ -114,7 +116,11 @@ try {
         'total_before_coupon' => (float) $pricing['total'],
         'coupon_discount' => $coupon_discount,
         'coupon_error' => $coupon_error,
-        'total' => $total,
+        'total' => $subtotal,
+        'on_site_total' => $payTotals['on_site_total'],
+        'online_total' => $payTotals['online_total'],
+        'online_discount_percent' => $payTotals['online_discount_percent'],
+        'online_discount_amount' => $payTotals['online_discount_amount'],
     ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
     error_log('booking_price_preview error: ' . $e->getMessage());

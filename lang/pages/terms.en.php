@@ -5,39 +5,36 @@ declare(strict_types=1);
 /** @return array<string, mixed> */
 return [
     'label' => 'Legal',
-    'updated_note' => 'This text is for information only; for specific situations consult a legal adviser.',
+    'updated_note' => 'Structure aligned with maib e-commerce requirements for online commerce.',
+    'intro' => '<p>These Terms and Conditions for use of the online store at <a href="{site_url}" class="text-ink font-semibold underline decoration-black/20 underline-offset-4 hover:decoration-ink">{site_url}</a> apply to orders for short-term accommodation services (furnished apartment rentals) offered by <strong class="text-ink">{company_name}</strong> through the website.</p><p>We recommend reading these Terms carefully before using the site. We reserve the right to amend these provisions without prior notice.</p>',
     'sections' => [
         [
-            'title' => '1. Operator and acceptance',
-            'body' => '<p>The <strong class="text-ink">Like HOME</strong> website is operated to present properties available for short-term rental and to facilitate booking requests. By accessing and using the site you confirm that you have read and understood these terms. If you do not agree, please do not use the site.</p>',
+            'title' => '1. General provisions',
+            'body' => '<p>This website is owned by <strong class="text-ink">{company_name}</strong>, IDNO {company_idno}. By placing an order (booking) in the online store, the Buyer accepts these Terms and Conditions, based on the legislation of the Republic of Moldova.</p><p>Use of the website implies acceptance of the Terms and Conditions proposed by {company_name}, in accordance with Law no. 284/2004 on Electronic Commerce. The relationship between the client and the provider is governed by Law no. 105/2003 on Consumer Protection and related regulations.</p><p>The provider reserves the right to amend these Terms; the Buyer must monitor changes published on this page.</p>',
         ],
         [
-            'title' => '2. Service provided',
-            'body' => '<p>Content (descriptions, images, indicative prices, availability) is for information only. The final offer, contractual terms, and booking confirmation are set in direct communication with the operator / owner, according to the process described on the site or when you contact us.</p>',
+            'title' => '2. Personal data protection',
+            'body' => '<p>By using {site_url}, you agree to the collection and processing of personal data necessary to process, confirm, and fulfil orders.</p><p>Personal data is processed only for legitimate purposes: providing the booked accommodation, booking-related communications, site security, analytics (if you accept analytics cookies), and, where applicable, marketing with your consent.</p><p>Personal data is stored and used for the period necessary to achieve the purposes for which it was collected, in accordance with Law no. 133/2011 on personal data protection.</p><p>We use security measures to prevent unauthorised access and ensure proper use of information. Data transmission over the internet cannot be fully protected; therefore some operations are carried out at the user\'s own reasonable risk.</p><p>Further details: <a href="{privacy_url}" class="text-ink font-semibold underline decoration-black/20 underline-offset-4 hover:decoration-ink">Privacy Policy</a>.</p>',
         ],
         [
-            'title' => '3. Bookings and payments',
-            'body' => '<p>Specific rules on deposits, payment, cancellation, changes, and refund policy are communicated for each property and stay. It is your responsibility to verify these conditions before confirming.</p>',
+            'title' => '3. Order registration and payment',
+            'body' => '<p>Bookings are made online by completing the required details and accepting these Terms and Conditions. Payment options:</p><ul><li><strong class="text-ink">Pay online by card</strong> — via the secure maib e-commerce service (bank page). After payment you will receive payment confirmation by email. An online discount of {online_discount}% may apply. Transaction currency: {company_currency}.</li><li><strong class="text-ink">Pay at check-in</strong> — full amount on arrival (cash or card), without the online discount.</li></ul><p>Online payment is made under maximum security using a payment card. maib uses the <strong class="text-ink">3D-Secure</strong> security standard: you may be redirected to the secure maib page where cardholder authentication uses a one-time code for the online transaction.</p><p><strong class="text-ink">Refunds</strong> are made only to the payment card used for the purchase, via maib, within usual banking timeframes.</p><p>For online payment, card details are entered exclusively on the secure maib page; {company_name} <strong class="text-ink">does not collect or store</strong> card number, CVV/CVC, or other sensitive card data. Information is transmitted encrypted to the payment system.</p><p>Payment may require: card number (16 digits), expiry date, CVC/CVV code (3 digits), and name on card. If your card currency differs from {company_currency}, your issuing bank\'s conversion terms apply.</p>',
         ],
         [
-            'title' => '4. Conduct and proper use',
-            'body' => '<ul><li>You will not use the site in a way that violates the law or third-party rights.</li><li>You will not attempt unauthorized access to systems, data, or accounts.</li><li>Information provided when booking or contacting us must be accurate and up to date.</li></ul>',
+            'title' => '4. Provision of accommodation services',
+            'body' => '<p>After order (booking) confirmation, the Client receives stay details by email: booked property, check-in → check-out period, guest count, and access instructions.</p><p>The service consists of making the apartment available at the address indicated in the confirmation for the booked period. Access is usually self check-in; codes and practical details are sent before arrival (including via check-in reminder email).</p><p>Standard check-in and check-out times are communicated in the booking confirmation and may vary slightly by property. Payment beneficiary for services sold on this site: {company_name}.</p><p>Service delivery may be affected in exceptional situations (force majeure, unforeseen technical issues, etc.); we will inform you in advance if such situations arise.</p>',
         ],
         [
-            'title' => '5. Intellectual property',
-            'body' => '<p>Materials on the site (text, images, logo, structure) are protected. Reproduction or commercial use without written consent is not permitted, except reasonable personal use related to a booking.</p>',
+            'title' => '5. Booking cancellation and payment refund',
+            'body' => '<p>Short-term accommodation services are personalised (confirmed period and apartment). Cancellation and refund apply under the conditions below, in the spirit of consumer protection (Law no. 105/2003).</p><p><strong class="text-ink">Online paid bookings (maib):</strong> full refund of the online amount is possible if cancellation is requested at least <strong class="text-ink">{refund_hours} hours</strong> before check-in time (00:00 on check-in day). Below this deadline, refund is not automatically guaranteed; exceptional cases are reviewed individually.</p><p><strong class="text-ink">Pay-at-check-in bookings:</strong> cancellation releases the booked period; there is no online amount to refund.</p><p>Contact for cancellation / refund: <a href="mailto:{email}" class="text-ink font-semibold underline decoration-black/20 underline-offset-4 hover:decoration-ink">{email}</a>, phone {company_phones}. Refund requests for online payments are processed via maib; actual timing depends on the card-issuing bank.</p>',
         ],
         [
-            'title' => '6. Limitation of liability',
-            'body' => '<p>The operator makes efforts to keep information accurate and the site available but does not guarantee absence of errors or interruptions. To the extent permitted by law, liability for indirect or consequential damage may be excluded or limited.</p>',
+            'title' => '6. Privacy policy',
+            'body' => '<p>In accordance with Law no. 133/2011, {company_name} processes personal data in good faith, on legal grounds and in compliance with applicable provisions. Processing uses automated and manual means, respecting security and confidentiality requirements.</p><p>We collect data provided when placing an order: name, email, phone, booking details (period, guest count). Data is used to administer the site, fulfil the booking, stay-related communications, and, where applicable, analytics or marketing only with your consent.</p><p>We do not disclose personal data to third parties without your consent, except as required by law or necessary for payment processing (e.g. maib). We <strong class="text-ink">do not collect</strong> card transaction details (card number, expiry, issuing country) — these are processed exclusively by maib.</p><p>For full details, your rights (access, rectification, erasure, etc.), and cookies, see our <a href="{privacy_url}" class="text-ink font-semibold underline decoration-black/20 underline-offset-4 hover:decoration-ink">Privacy Policy</a> or contact <a href="mailto:{email}" class="text-ink font-semibold underline decoration-black/20 underline-offset-4 hover:decoration-ink">{email}</a>.</p>',
         ],
         [
-            'title' => '7. Changes',
-            'body' => '<p>We reserve the right to update these terms. The version in force is the one published on this page, with the update date shown above.</p>',
-        ],
-        [
-            'title' => '8. Contact and applicable law',
-            'body' => '<p>For questions about these terms: <a href="mailto:{email}" class="text-ink font-semibold underline decoration-black/20 underline-offset-4 hover:decoration-ink">{email}</a>. For disputes, the law of the jurisdiction relevant to the operator applies (according to your company registration).</p>',
+            'title' => '7. Contact details',
+            'body' => '<ul class="list-none pl-0 space-y-1"><li><strong class="text-ink">Legal name:</strong> {company_name}</li><li><strong class="text-ink">IDNO:</strong> {company_idno}</li><li><strong class="text-ink">Registered address:</strong> {company_address}</li><li><strong class="text-ink">Service delivery address:</strong> at the address of the booked apartment (communicated in booking confirmation)</li><li><strong class="text-ink">Contact phone:</strong> {company_phones}</li><li><strong class="text-ink">Contact email:</strong> <a href="mailto:{email}" class="text-ink font-semibold underline decoration-black/20 underline-offset-4 hover:decoration-ink">{email}</a></li><li><strong class="text-ink">Bank account ({company_currency}):</strong> {company_iban} · BIC {company_bic}</li></ul><p>Disputes are governed by the law of the Republic of Moldova.</p>',
         ],
     ],
 ];

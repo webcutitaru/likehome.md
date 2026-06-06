@@ -247,12 +247,7 @@ if (!function_exists('lh_locale_url')) {
 if (!function_exists('lh_absolute_locale_url')) {
     function lh_absolute_locale_url(string $path = '', ?string $locale = null): string
     {
-        $rel = lh_locale_url($path, $locale);
-        if ($rel === '' || $rel === '/') {
-            return lh_public_site_origin() . '/';
-        }
-
-        return lh_public_site_origin() . $rel;
+        return lh_join_site_origin_and_path(lh_locale_url($path, $locale));
     }
 }
 

@@ -54,14 +54,26 @@ $lh_footer_city = lh_site_contact_city();
   </div>
 
   <div class="border-t border-white/10">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-white">
-      <div>© <?php echo date('Y'); ?> Like HOME. <?= htmlspecialchars(__('footer.rights'), ENT_QUOTES, 'UTF-8') ?></div>
-      <div class="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 sm:gap-x-8">
-        <a href="<?= htmlspecialchars(lh_locale_url('terms.php'), ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors"><?= htmlspecialchars(__('footer.terms'), ENT_QUOTES, 'UTF-8') ?></a>
-        <a href="<?= htmlspecialchars(lh_locale_url('privacy.php'), ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors"><?= htmlspecialchars(__('footer.privacy'), ENT_QUOTES, 'UTF-8') ?></a>
-        <button type="button" id="lh-footer-cookie-settings" class="text-white hover:text-zinc-200 transition-colors bg-transparent border-0 cursor-pointer p-0 text-xs font-inherit underline decoration-white/30 underline-offset-2">
-          <?= htmlspecialchars(__('footer.cookies'), ENT_QUOTES, 'UTF-8') ?>
-        </button>
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+      <div class="text-center text-[11px] text-white/80 leading-relaxed max-w-3xl mx-auto">
+        <p class="font-semibold text-white"><?= htmlspecialchars(lh_company_legal_name(), ENT_QUOTES, 'UTF-8') ?></p>
+        <p><?= htmlspecialchars(__('footer.legal_idno'), ENT_QUOTES, 'UTF-8') ?>: <?= htmlspecialchars(lh_company_idno(), ENT_QUOTES, 'UTF-8') ?> · <?= htmlspecialchars(lh_company_legal_address(), ENT_QUOTES, 'UTF-8') ?></p>
+      </div>
+      <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4" aria-label="<?= htmlspecialchars(__('footer.payment_logos'), ENT_QUOTES, 'UTF-8') ?>">
+        <img src="<?= htmlspecialchars(lh_public_url('assets/img/payments/maib.png'), ENT_QUOTES, 'UTF-8') ?>" alt="maib" width="72" height="28" class="h-7 w-auto" loading="lazy" decoding="async">
+        <img src="<?= htmlspecialchars(lh_public_url('assets/img/payments/visa.png'), ENT_QUOTES, 'UTF-8') ?>" alt="Visa" width="48" height="16" class="h-4 w-auto" loading="lazy" decoding="async">
+        <img src="<?= htmlspecialchars(lh_public_url('assets/img/payments/mastercard.png'), ENT_QUOTES, 'UTF-8') ?>" alt="Mastercard" width="48" height="16" class="h-4 w-auto" loading="lazy" decoding="async">
+        <img src="<?= htmlspecialchars(lh_public_url('assets/img/payments/amex.png'), ENT_QUOTES, 'UTF-8') ?>" alt="American Express" width="48" height="16" class="h-4 w-auto" loading="lazy" decoding="async">
+      </div>
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-white">
+        <div>© <?php echo date('Y'); ?> Like HOME. <?= htmlspecialchars(__('footer.rights'), ENT_QUOTES, 'UTF-8') ?></div>
+        <div class="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 sm:gap-x-8">
+          <a href="<?= htmlspecialchars(lh_locale_url('terms.php'), ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors"><?= htmlspecialchars(__('footer.terms'), ENT_QUOTES, 'UTF-8') ?></a>
+          <a href="<?= htmlspecialchars(lh_locale_url('privacy.php'), ENT_QUOTES, 'UTF-8') ?>" class="text-white hover:text-zinc-200 transition-colors"><?= htmlspecialchars(__('footer.privacy'), ENT_QUOTES, 'UTF-8') ?></a>
+          <button type="button" id="lh-footer-cookie-settings" class="text-white hover:text-zinc-200 transition-colors bg-transparent border-0 cursor-pointer p-0 text-xs font-inherit underline decoration-white/30 underline-offset-2">
+            <?= htmlspecialchars(__('footer.cookies'), ENT_QUOTES, 'UTF-8') ?>
+          </button>
+        </div>
       </div>
     </div>
   </div>

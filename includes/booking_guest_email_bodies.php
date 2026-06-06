@@ -111,6 +111,46 @@ if (!function_exists('lh_build_guest_booking_confirmation_body')) {
             $lines[] = '«' . $cCode . '»: -' . $discFmt;
         }
         $lines[] = $t('email.confirm_total') . ': ' . $totalFormatted;
+        if (!empty($ctx['paid_online'])) {
+            $paidFmt = function_exists('lh_format_money')
+                ? lh_format_money((float) ($ctx['payment_amount'] ?? $total), 2)
+                : (string) ($ctx['payment_amount'] ?? $total);
+            $lines[] = $t('email.confirm_paid_online') . ': ' . $paidFmt;
+            if (function_exists('lh_company_legal_name')) {
+                $lines[] = $t('email.confirm_merchant') . ': ' . lh_company_legal_name();
+            }
+            $siteUrl = function_exists('lh_public_site_origin')
+                ? lh_public_site_origin()
+                : 'https://www.likehome.md';
+            $lines[] = $t('email.confirm_website') . ': ' . $siteUrl;
+            $lines[] = $t('email.confirm_order_no') . ': LH-' . $bookingId;
+            $currency = trim((string) ($ctx['currency'] ?? ''));
+            if ($currency === '' && function_exists('lh_company_currency')) {
+                $currency = lh_company_currency();
+            }
+            if ($currency !== '') {
+                $lines[] = $t('email.confirm_currency') . ': ' . $currency;
+            }
+            $paidAtRaw = trim((string) ($ctx['paid_at'] ?? ''));
+            if ($paidAtRaw !== '') {
+                $paidAtDisp = $paidAtRaw;
+                try {
+                    $paidAtDt = new DateTimeImmutable($paidAtRaw);
+                    $paidAtDisp = $paidAtDt->format('d.m.Y H:i');
+                } catch (Throwable) {
+                    /* keep raw */
+                }
+                $lines[] = $t('email.confirm_payment_date') . ': ' . $paidAtDisp;
+            }
+        } elseif (($ctx['payment_method'] ?? '') === 'on_site') {
+            $lines[] = $t('email.confirm_pay_at_checkin');
+        }
+        if (!empty($ctx['online_discount_amount']) && (float) $ctx['online_discount_amount'] > 0.004) {
+            $discOnline = function_exists('lh_format_money')
+                ? lh_format_money((float) $ctx['online_discount_amount'], 2)
+                : (string) $ctx['online_discount_amount'];
+            $lines[] = $t('email.confirm_online_discount') . ': -' . $discOnline;
+        }
         $lines[] = 'Booking ID: #' . $bookingId;
         $lines[] = '';
         $lines[] = $phones;

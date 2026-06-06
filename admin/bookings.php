@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 include('../config.php');
 require_once __DIR__ . '/../includes/checkin_reminder_send.php';
+require_once __DIR__ . '/../includes/booking_payment.php';
+require_once __DIR__ . '/../includes/booking_admin.php';
 include('includes/header.php');
 
 $pdo = getPDO();
@@ -96,6 +98,44 @@ SQL;
                     $message_type = 'warning';
                 }
             }
+        } elseif ($booking_id > 0 && $action === 'refund') {
+            require_once __DIR__ . '/../includes/booking_refund.php';
+            $refundAmountRaw = trim((string) ($_POST['refund_amount'] ?? ''));
+            $refundAmount = $refundAmountRaw === '' ? null : (float) str_replace(',', '.', $refundAmountRaw);
+            $refundReason = trim((string) ($_POST['refund_reason'] ?? ''));
+            $refundOut = lh_booking_process_maib_refund(
+                $pdo,
+                $booking_id,
+                $refundAmount,
+                $refundReason !== '' ? $refundReason : null
+            );
+            if (!empty($refundOut['ok'])) {
+                lh_admin_log_activity($conn, 'booking_refund', 'booking', $booking_id, [
+                    'refund_id' => (string) ($refundOut['refund_id'] ?? ''),
+                    'refunded_amount' => (float) ($refundOut['refunded_amount'] ?? 0),
+                    'remaining' => (float) ($refundOut['remaining'] ?? 0),
+                ]);
+                $message = (string) ($refundOut['message'] ?? 'Rambursarea a fost inițiată.');
+                $message_type = 'success';
+            } else {
+                $message = (string) ($refundOut['message'] ?? 'Rambursarea a eșuat.');
+                $message_type = 'warning';
+            }
+        } elseif ($booking_id > 0 && $action === 'update') {
+            $updateOut = lh_admin_process_booking_update($pdo, $_POST);
+            if (!empty($updateOut['ok'])) {
+                lh_admin_log_activity($conn, 'booking_update', 'booking', $booking_id, [
+                    'property_id' => (int) ($updateOut['property_id'] ?? 0),
+                    'check_in' => (string) ($updateOut['check_in'] ?? ''),
+                    'check_out' => (string) ($updateOut['check_out'] ?? ''),
+                    'source' => 'bookings',
+                ]);
+                $message = (string) ($updateOut['message'] ?? 'Rezervarea a fost actualizată.');
+                $message_type = 'success';
+            } else {
+                $message = (string) ($updateOut['message'] ?? 'Salvarea a eșuat.');
+                $message_type = 'warning';
+            }
         } elseif ($booking_id > 0 && in_array($action, ['confirm', 'cancel'], true)) {
             $stmtBook = $pdo->prepare('SELECT * FROM bookings WHERE id = ? LIMIT 1');
             $stmtBook->execute([$booking_id]);
@@ -141,18 +181,13 @@ SQL;
                 }
 
                 if ($action === 'cancel') {
-                    $pdo->prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?")->execute([$booking_id]);
-                    $del = $pdo->prepare(
-                        'DELETE FROM blocked_dates
-                         WHERE property_id = ? AND source = ? AND external_event_id = ?'
-                    );
-                    $del->execute([(int) $booking['property_id'], 'direct_booking', 'booking-' . $booking_id]);
-
+                    require_once __DIR__ . '/../includes/booking_confirm.php';
+                    $cancelOut = lh_booking_cancel_booking($pdo, $booking_id);
                     lh_admin_log_activity($conn, 'booking_cancel', 'booking', $booking_id, [
                         'property_id' => (int) ($booking['property_id'] ?? 0),
                     ]);
-                    $message = 'Rezervarea a fost anulată și perioada a fost eliberată.';
-                    $message_type = 'warning';
+                    $message = (string) ($cancelOut['message'] ?? 'Rezervarea a fost anulată.');
+                    $message_type = !empty($cancelOut['ok']) ? 'warning' : 'warning';
                 }
             }
         }
@@ -400,7 +435,13 @@ function booking_filter_page_title(string $status_filter): string
                                 <div class="text-xs text-slate-400 mt-1"><?php echo htmlspecialchars($row['property_city'] ?? ''); ?></div>
                             </td>
                             <td class="px-8 py-6">
-                                <div class="font-bold text-slate-800"><?php echo htmlspecialchars((string) $row['guest_name']); ?></div>
+                                <?php
+                                $modalPayload = lh_admin_booking_modal_payload($row, 'bookings');
+                                $modalJson = htmlspecialchars(json_encode($modalPayload, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
+                                ?>
+                                <button type="button" class="text-left group" data-booking="<?php echo $modalJson; ?>" data-lh-booking-open="1" title="Detalii rezervare">
+                                    <div class="font-bold text-slate-800 group-hover:text-cta group-hover:underline underline-offset-2 transition-colors"><?php echo htmlspecialchars((string) $row['guest_name']); ?></div>
+                                </button>
                                 <div class="text-xs text-slate-500 mt-1"><?php echo htmlspecialchars((string) $row['guest_phone']); ?></div>
                                 <div class="text-xs text-slate-400 mt-1 break-all"><?php echo htmlspecialchars((string) $row['guest_email']); ?></div>
                             </td>
@@ -429,37 +470,40 @@ function booking_filter_page_title(string $status_filter): string
                                 <span class="inline-flex px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest <?php echo booking_row_status_badge_class($row); ?>">
                                     <?php echo htmlspecialchars(booking_row_status_label($row)); ?>
                                 </span>
+                                <?php if (!empty($row['payment_status'])): ?>
+                                <div class="text-[10px] text-slate-500 font-semibold mt-1.5"><?php echo htmlspecialchars(lh_booking_payment_status_label((string) $row['payment_status']), ENT_QUOTES, 'UTF-8'); ?></div>
+                                <?php endif; ?>
                             </td>
                             <td class="px-8 py-6">
-                                <div class="flex flex-wrap justify-end gap-2 text-xs font-bold uppercase tracking-tighter">
+                                <div class="flex flex-col gap-2 w-[180px] ml-auto">
                                     <?php if ($row['status'] === 'confirmed' && !lh_booking_stay_finished_by_row($row)): ?>
-                                        <form method="POST" class="inline">
+                                        <form method="POST" class="w-full">
                                             <?php lh_csrf_field(); ?>
                                             <input type="hidden" name="booking_id" value="<?php echo (int) $row['id']; ?>">
                                             <input type="hidden" name="action" value="send_checkin_reminder">
-                                            <button type="submit" class="bg-slate-50 text-slate-700 px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all" title="Trimite acum același email de reminder check-in ca la cron (fără așteptarea ferestrei de 24h).">
+                                            <button type="submit" class="w-full bg-slate-50 text-slate-700 px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all text-xs font-bold" title="Trimite acum același email de reminder check-in ca la cron (fără așteptarea ferestrei de 24h).">
                                                 Trimite email reminder
                                             </button>
                                         </form>
                                     <?php endif; ?>
 
                                     <?php if ($row['status'] !== 'confirmed'): ?>
-                                        <form method="POST" class="inline">
+                                        <form method="POST" class="w-full">
                                             <?php lh_csrf_field(); ?>
                                             <input type="hidden" name="booking_id" value="<?php echo (int) $row['id']; ?>">
                                             <input type="hidden" name="action" value="confirm">
-                                            <button type="submit" class="bg-brand-100 text-cta px-4 py-2 rounded-xl border border-black/8 hover:bg-cta hover:text-white transition-all">
+                                            <button type="submit" class="w-full bg-brand-100 text-cta px-4 py-2 rounded-xl border border-black/8 hover:bg-cta hover:text-white transition-all text-xs font-bold">
                                                 Confirmă
                                             </button>
                                         </form>
                                     <?php endif; ?>
 
                                     <?php if ($row['status'] !== 'cancelled'): ?>
-                                        <form method="POST" class="inline">
+                                        <form method="POST" class="w-full">
                                             <?php lh_csrf_field(); ?>
                                             <input type="hidden" name="booking_id" value="<?php echo (int) $row['id']; ?>">
                                             <input type="hidden" name="action" value="cancel">
-                                            <button type="submit" class="bg-red-50 text-red-500 px-4 py-2 rounded-xl hover:bg-red-500 hover:text-white transition-all">
+                                            <button type="submit" class="w-full bg-red-50 text-red-500 px-4 py-2 rounded-xl border border-red-100 hover:bg-red-500 hover:text-white transition-all text-xs font-bold">
                                                 Anulează
                                             </button>
                                         </form>

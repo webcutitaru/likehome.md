@@ -29,11 +29,14 @@ $contactEmail = lh_site_contact_email();
 
 <div class="max-w-4xl mx-auto px-4 sm:px-6 mt-6 md:mt-10 pt-0 pb-0">
   <div class="prose prose-neutral max-w-none space-y-10 text-blue-grey leading-relaxed [&_h2]:text-ink [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-0 [&_h2]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2">
+<?php if (!empty($terms['intro'])): ?>
+    <div class="text-blue-grey leading-relaxed"><?= lh_terms_replace_placeholders((string) $terms['intro']) ?></div>
+<?php endif; ?>
 <?php foreach ($sections as $section):
     if (!is_array($section)) {
         continue;
     }
-    $body = str_replace('{email}', $contactEmail, (string) ($section['body'] ?? ''));
+    $body = lh_terms_replace_placeholders((string) ($section['body'] ?? ''));
 ?>
     <section>
       <h2><?= htmlspecialchars((string) ($section['title'] ?? ''), ENT_QUOTES, 'UTF-8') ?></h2>

@@ -3,12 +3,15 @@
  * Booking form card for property-details.php (desktop slot + mobile sheet via JS reparent).
  * Expects $property (array) with price and optional pricing columns.
  */
+require_once __DIR__ . '/booking_payment.php';
+
 if (!isset($property) || !is_array($property)) {
     return;
 }
 
 $lh_std = (float) ($property['price'] ?? 0);
 $lh_min_stay = max(1, (int) ($property['min_stay'] ?? 1));
+$lh_online_discount_pct = (int) lh_booking_online_discount_percent();
 $lh_date_hint_rest = $lh_min_stay === 1
     ? __('booking.date_hint_min1')
     : __('booking.date_hint_min_n', ['n' => (string) $lh_min_stay]);
@@ -75,12 +78,38 @@ $lh_date_hint_rest = $lh_min_stay === 1
 <div id="lh-total-coupon-line" class="hidden font-medium text-emerald-800 tabular-nums leading-snug text-sm"></div>
 <div id="lh-total-extra-line" class="hidden font-medium text-ink tabular-nums leading-snug text-sm"></div>
 <p id="lh-total-extra-guest-note" class="hidden text-[10px] text-blue-grey font-medium leading-snug m-0" role="status" aria-live="polite"></p>
+<div id="lh-total-online-discount-line" class="hidden font-medium text-emerald-800 tabular-nums leading-snug text-sm"></div>
 </div>
 <div class="lh-total-pricing-row">
-<span class="text-blue-grey lh-total-pricing-label"><?= htmlspecialchars(__('booking.total_pay'), ENT_QUOTES, 'UTF-8') ?></span>
+<span id="lh-total-pay-label" class="text-blue-grey lh-total-pricing-label"><?= htmlspecialchars(__('booking.total_pay'), ENT_QUOTES, 'UTF-8') ?></span>
 <span id="totalPrice" class="font-bold text-cta lh-total-pricing-value lh-total-pricing-value--total tabular-nums"></span>
 </div>
 </div>
+
+<fieldset class="mb-4 space-y-2 border-0 p-0 m-0">
+<legend class="block text-xs font-semibold text-blue-grey uppercase tracking-wide mb-2"><?= htmlspecialchars(__('booking.payment_method_label'), ENT_QUOTES, 'UTF-8') ?></legend>
+<label class="flex items-start gap-3 p-3 rounded-xl border border-black/10 bg-surface cursor-pointer has-[:checked]:border-cta has-[:checked]:ring-2 has-[:checked]:ring-cta/20">
+  <input type="radio" name="booking_payment_method" value="on_site" class="mt-1 accent-cta" checked>
+  <span class="min-w-0">
+    <span class="block text-sm font-bold text-ink"><?= htmlspecialchars(__('booking.payment_on_site'), ENT_QUOTES, 'UTF-8') ?></span>
+    <span class="block text-xs text-blue-grey mt-0.5"><?= htmlspecialchars(__('booking.payment_on_site_hint'), ENT_QUOTES, 'UTF-8') ?></span>
+    <span id="lh-pay-on-site-amount" class="block text-sm font-bold text-ink tabular-nums mt-1"></span>
+  </span>
+</label>
+<label class="flex items-start gap-3 p-3 rounded-xl border border-black/10 bg-surface cursor-pointer has-[:checked]:border-cta has-[:checked]:ring-2 has-[:checked]:ring-cta/20">
+  <input type="radio" name="booking_payment_method" value="online" class="mt-1 accent-cta">
+  <span class="min-w-0">
+    <span class="block text-sm font-bold text-ink"><?= htmlspecialchars(__('booking.payment_online'), ENT_QUOTES, 'UTF-8') ?><?php if ($lh_online_discount_pct > 0): ?> <span class="text-emerald-700">(−<?= (int) $lh_online_discount_pct ?>%)</span><?php endif; ?></span>
+    <span class="block text-xs text-blue-grey mt-0.5"><?= htmlspecialchars(__('booking.payment_online_hint'), ENT_QUOTES, 'UTF-8') ?></span>
+    <span id="lh-pay-online-amount" class="block text-sm font-bold text-cta tabular-nums mt-1"></span>
+  </span>
+</label>
+</fieldset>
+
+<label class="flex items-start gap-2.5 mb-4 text-sm text-ink/85 cursor-pointer">
+  <input type="checkbox" id="bookingTermsAccepted" class="mt-1 accent-cta shrink-0">
+  <span><?= __('booking.terms_accept_html', ['terms_url' => lh_locale_url('terms.php')]) ?></span>
+</label>
 
 <input id="guestName" type="text" placeholder="<?= htmlspecialchars(__('booking.name_placeholder'), ENT_QUOTES, 'UTF-8') ?>" class="w-full mb-3 bg-surface border border-black/10 rounded-xl p-3 text-ink placeholder:text-blue-grey focus:outline-none focus:ring-2 focus:ring-cta/20 focus:border-cta">
 

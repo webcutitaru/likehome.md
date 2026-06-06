@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/company_legal.php';
+
 if (!function_exists('lh_nav_current_script')) {
     function lh_nav_current_script(): string
     {

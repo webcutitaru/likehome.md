@@ -5,6 +5,7 @@
         "php": ">=8.2",
         "ext-filter": "*",
         "ext-hash": "*",
+        "maib-ecomm/maib-checkout-sdk-php": "^1.0",
         "mailjet/mailjet-apiv3-php": "^1.6",
         "phpmailer/phpmailer": "^6.9"
     },

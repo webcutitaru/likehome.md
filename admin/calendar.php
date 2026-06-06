@@ -15,6 +15,7 @@ if (isset($conn) && $conn instanceof mysqli) {
 }
 
 require_once __DIR__ . '/../includes/booking_pricing.php';
+require_once __DIR__ . '/../includes/booking_admin.php';
 
 $pdo = getPDO();
 
@@ -194,137 +195,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['calendar_action'] ?? '') =
     }
 
     $bookingId = (int) ($_POST['booking_id'] ?? 0);
-    $guest_name = trim((string) ($_POST['guest_name'] ?? ''));
-    $guest_email = trim((string) ($_POST['guest_email'] ?? ''));
-    $guest_phone = trim((string) ($_POST['guest_phone'] ?? ''));
-    $check_in = trim((string) ($_POST['check_in'] ?? ''));
-    $check_out = trim((string) ($_POST['check_out'] ?? ''));
-    $guests = filter_input(INPUT_POST, 'guests', FILTER_VALIDATE_INT);
-
-    if ($bookingId < 1) {
-        $failRedirect('Rezervare invalidă.');
-    }
-    if ($guest_name === '') {
-        $failRedirect('Completează numele.');
-    }
-    if (!filter_var($guest_email, FILTER_VALIDATE_EMAIL)) {
-        $failRedirect('Email invalid.');
-    }
-    if ($guest_phone === '') {
-        $failRedirect('Completează numărul de telefon.');
-    }
-    if (!$guests || $guests < 1) {
-        $failRedirect('Număr invalid de oaspeți.');
-    }
-
-    $checkInDt = DateTimeImmutable::createFromFormat('Y-m-d', $check_in);
-    $checkOutDt = DateTimeImmutable::createFromFormat('Y-m-d', $check_out);
-    if (!$checkInDt || $checkInDt->format('Y-m-d') !== $check_in) {
-        $failRedirect('Data de check-in este invalidă.');
-    }
-    if (!$checkOutDt || $checkOutDt->format('Y-m-d') !== $check_out) {
-        $failRedirect('Data de check-out este invalidă.');
-    }
-    if ($checkOutDt <= $checkInDt) {
-        $failRedirect('Check-out trebuie să fie după check-in (minim o noapte).');
-    }
-
-    $extId = 'booking-' . $bookingId;
-
-    try {
-        $pdo->beginTransaction();
-        $stmtB = $pdo->prepare('SELECT * FROM bookings WHERE id = ? FOR UPDATE');
-        $stmtB->execute([$bookingId]);
-        $booking = $stmtB->fetch(PDO::FETCH_ASSOC);
-        if (!$booking) {
-            $pdo->rollBack();
-            $failRedirect('Rezervarea nu a fost găsită.');
-        }
-        if (($booking['status'] ?? '') === 'cancelled') {
-            $pdo->rollBack();
-            $failRedirect('Nu poți edita o rezervare anulată.');
-        }
-
-        $property_id = (int) $booking['property_id'];
-        $stmtP = $pdo->prepare('SELECT * FROM properties WHERE id = ? FOR UPDATE');
-        $stmtP->execute([$property_id]);
-        $property = $stmtP->fetch(PDO::FETCH_ASSOC);
-        if (!$property) {
-            $pdo->rollBack();
-            $failRedirect('Proprietatea nu există.');
-        }
-
-        if (!empty($property['sleep_capacity']) && $guests > (int) $property['sleep_capacity']) {
-            $pdo->rollBack();
-            $failRedirect('Numărul de oaspeți depășește capacitatea proprietății.');
-        }
-
-        $nightsForMin = (int) $checkOutDt->diff($checkInDt)->days;
-        $effMinStay = lh_booking_effective_min_stay($property, $check_in, $check_out);
-        if ($nightsForMin < $effMinStay) {
-            $pdo->rollBack();
-            $failRedirect('Sejurul minim este de ' . $effMinStay . ' nopți.');
-        }
-
-        $overlap = $pdo->prepare(
-            'SELECT COUNT(*)
-             FROM blocked_dates
-             WHERE property_id = :property_id
-               AND start_date < :check_out
-               AND end_date > :check_in
-               AND NOT (source = \'direct_booking\' AND external_event_id = :ext_id)'
-        );
-        $overlap->execute([
-            ':property_id' => $property_id,
-            ':check_in' => $check_in,
-            ':check_out' => $check_out,
-            ':ext_id' => $extId,
-        ]);
-        if ((int) $overlap->fetchColumn() > 0) {
-            $pdo->rollBack();
-            $failRedirect('Perioada selectată nu este disponibilă (conflict cu alte blocări).');
-        }
-
-        $pricing = lh_booking_stay_total($property, $check_in, $check_out, $guests);
-        $total_price = $pricing['total'];
-
-        $upd = $pdo->prepare(
-            'UPDATE bookings SET guest_name = ?, guest_phone = ?, guest_email = ?, check_in = ?, check_out = ?, guests = ?, total_price = ? WHERE id = ?'
-        );
-        $upd->execute([$guest_name, $guest_phone, $guest_email, $check_in, $check_out, $guests, $total_price, $bookingId]);
-
-        $updBlk = $pdo->prepare(
-            'UPDATE blocked_dates SET start_date = ?, end_date = ? WHERE property_id = ? AND source = ? AND external_event_id = ?'
-        );
-        $updBlk->execute([$check_in, $check_out, $property_id, 'direct_booking', $extId]);
-        if ($updBlk->rowCount() === 0) {
-            $ins = $pdo->prepare(
-                'INSERT INTO blocked_dates (property_id, start_date, end_date, source, external_event_id, notes)
-                 VALUES (?, ?, ?, ?, ?, ?)'
-            );
-            $ins->execute([
-                $property_id,
-                $check_in,
-                $check_out,
-                'direct_booking',
-                $extId,
-                'Booking #' . $bookingId,
-            ]);
-        }
-
-        $pdo->commit();
-    } catch (Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        error_log('calendar booking_update: ' . $e->getMessage());
-        $failRedirect('Salvarea a eșuat. Încearcă din nou.');
+    $updateOut = lh_admin_process_booking_update($pdo, $_POST);
+    if (empty($updateOut['ok'])) {
+        $failRedirect((string) ($updateOut['message'] ?? 'Salvarea a eșuat.'));
     }
 
     lh_admin_log_activity($conn, 'booking_update', 'booking', $bookingId, [
-        'property_id' => $property_id,
-        'check_in' => $check_in,
-        'check_out' => $check_out,
+        'property_id' => (int) ($updateOut['property_id'] ?? 0),
+        'check_in' => (string) ($updateOut['check_in'] ?? ''),
+        'check_out' => (string) ($updateOut['check_out'] ?? ''),
         'source' => 'calendar',
     ]);
     header('Location: ' . $locBase . '&flash_ok=booking_updated');
@@ -393,7 +272,9 @@ $properties = $stmtProps->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
 $stmtBook = $pdo->prepare(
     "SELECT id, property_id, guest_name, guest_email, guest_phone, check_in, check_out, status, total_price, guests,
-            coupon_code, coupon_discount_amount
+            coupon_code, coupon_discount_amount,
+            payment_method, payment_status, payment_amount, refunded_amount, paid_at,
+            maib_checkout_id, maib_payment_id, maib_refund_id
      FROM bookings
      WHERE status IN ('pending', 'confirmed')
        AND check_out > ?
@@ -686,19 +567,11 @@ include __DIR__ . '/includes/header.php';
                                 if (mb_strlen($guestDisp) > 40) {
                                     $guestDisp = mb_substr($guestDisp, 0, 38) . '…';
                                 }
-                                $bookJson = htmlspecialchars(json_encode([
-                                    'id' => (int) $bookingNight['id'],
-                                    'guest_name' => (string) ($bookingNight['guest_name'] ?? ''),
-                                    'guest_email' => (string) ($bookingNight['guest_email'] ?? ''),
-                                    'guest_phone' => (string) ($bookingNight['guest_phone'] ?? ''),
-                                    'check_in' => (string) $bookingNight['check_in'],
-                                    'check_out' => (string) $bookingNight['check_out'],
-                                    'status' => (string) ($bookingNight['status'] ?? ''),
-                                    'total_price' => (float) ($bookingNight['total_price'] ?? 0),
-                                    'guests' => (int) ($bookingNight['guests'] ?? 0),
-                                    'coupon_code' => (string) ($bookingNight['coupon_code'] ?? ''),
-                                    'coupon_discount_amount' => (float) ($bookingNight['coupon_discount_amount'] ?? 0),
-                                ], JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+                                $bookPayload = lh_admin_booking_modal_payload(array_merge($bookingNight, [
+                                    'property_title' => (string) ($p['title'] ?? ''),
+                                    'property_lot_id' => (string) ($p['lot_id'] ?? ''),
+                                ]), 'calendar');
+                                $bookJson = htmlspecialchars(json_encode($bookPayload, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
                                 $hasCouponCal =
                                     (float) ($bookingNight['coupon_discount_amount'] ?? 0) > 0.004
                                     && trim((string) ($bookingNight['coupon_code'] ?? '')) !== '';
@@ -797,84 +670,6 @@ include __DIR__ . '/includes/header.php';
         <a id="mpEdit" href="#" class="mt-6 inline-flex items-center justify-center w-full py-3 rounded-xl bg-cta text-white font-bold hover:brightness-110">Editează proprietatea</a>
     </div>
 </div>
-
-<!-- Modal rezervare -->
-<div id="modalBooking" class="fixed inset-0 z-[8000] hidden items-center justify-center bg-slate-900/70 p-4">
-    <div class="bg-white max-w-md w-full rounded-2xl shadow-2xl p-8 relative">
-        <button type="button" class="cal-modal-close absolute top-4 right-4 text-slate-400 hover:text-slate-900 font-bold text-sm">✕</button>
-        <h3 class="text-xl font-black text-slate-900">Rezervare</h3>
-        <dl class="mt-4 space-y-2 text-sm">
-            <div class="flex gap-2"><dt class="text-slate-400 font-bold shrink-0">Client</dt><dd id="mbGuest" class="text-slate-800"></dd></div>
-            <div class="flex gap-2"><dt class="text-slate-400 font-bold shrink-0">Email</dt><dd id="mbEmail" class="text-slate-800 break-all"></dd></div>
-            <div class="flex gap-2"><dt class="text-slate-400 font-bold shrink-0">Telefon</dt><dd id="mbPhone" class="text-slate-800"></dd></div>
-            <div class="flex gap-2"><dt class="text-slate-400 font-bold shrink-0">Perioadă</dt><dd id="mbRange" class="text-slate-800"></dd></div>
-            <div class="flex gap-2"><dt class="text-slate-400 font-bold shrink-0">Status</dt><dd id="mbStatus" class="text-slate-800"></dd></div>
-            <div class="flex gap-2" id="mbCouponRow" style="display:none"><dt class="text-slate-400 font-bold shrink-0">Cupon</dt><dd id="mbCouponDetail" class="text-emerald-800 font-semibold min-w-0 break-words"></dd></div>
-            <div class="flex gap-2"><dt class="text-slate-400 font-bold shrink-0">Total</dt><dd id="mbTotal" class="text-slate-800"></dd></div>
-        </dl>
-        <div class="mt-6 flex flex-col gap-3">
-            <div class="grid grid-cols-2 gap-2">
-                <button type="button" id="mbBtnEdit" class="inline-flex items-center justify-center py-3 rounded-xl bg-cta text-white font-bold hover:brightness-110 text-sm">Editează</button>
-                <button type="button" id="mbBtnCancelBooking" class="inline-flex items-center justify-center py-3 rounded-xl border-2 border-red-200 text-red-600 font-bold hover:bg-red-50 text-sm">Anulează</button>
-            </div>
-            <a id="mbLink" href="#" class="text-center text-sm font-bold text-slate-500 hover:text-slate-800">Vezi în listă</a>
-        </div>
-    </div>
-</div>
-
-<!-- Modal editare rezervare -->
-<div id="modalBookingEdit" class="fixed inset-0 z-[8100] hidden items-center justify-center bg-slate-900/70 p-4">
-    <form method="post" action="calendar.php" class="bg-white max-w-md w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl p-8 relative">
-        <?php lh_csrf_field(); ?>
-        <input type="hidden" name="calendar_action" value="booking_update">
-        <input type="hidden" name="booking_id" id="beBookingId" value="">
-        <input type="hidden" name="redirect_from" value="<?php echo htmlspecialchars($fromYmd, ENT_QUOTES, 'UTF-8'); ?>">
-        <input type="hidden" name="redirect_days" value="<?php echo (int) $dayCount; ?>">
-        <button type="button" class="cal-modal-close absolute top-4 right-4 text-slate-400 hover:text-slate-900 font-bold text-sm">✕</button>
-        <h3 class="text-xl font-black text-slate-900 pr-8">Editează rezervarea</h3>
-        <div class="mt-4 space-y-3">
-            <div>
-                <label class="block text-xs font-bold text-slate-500 mb-1">Nume</label>
-                <input type="text" name="guest_name" id="beGuestName" required class="w-full border border-slate-200 rounded-xl px-3 py-2 font-bold text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 mb-1">Email</label>
-                <input type="email" name="guest_email" id="beGuestEmail" required class="w-full border border-slate-200 rounded-xl px-3 py-2 font-bold text-sm">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 mb-1">Telefon</label>
-                <input type="text" name="guest_phone" id="beGuestPhone" required class="w-full border border-slate-200 rounded-xl px-3 py-2 font-bold text-sm">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">Check-in</label>
-                    <input type="date" name="check_in" id="beCheckIn" required class="w-full border border-slate-200 rounded-xl px-2 py-2 font-bold text-sm">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">Check-out</label>
-                    <input type="date" name="check_out" id="beCheckOut" required class="w-full border border-slate-200 rounded-xl px-2 py-2 font-bold text-sm">
-                </div>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 mb-1">Oaspeți</label>
-                <input type="number" name="guests" id="beGuests" min="1" required class="w-full border border-slate-200 rounded-xl px-3 py-2 font-bold text-sm">
-            </div>
-            <p class="text-[10px] text-slate-400 leading-snug">La schimbarea perioadei sau numărului de oaspeți, totalul se recalculează automat. Perioada trebuie să fie liberă (fără alte blocări).</p>
-        </div>
-        <div class="mt-6 flex flex-col gap-2">
-            <button type="submit" class="w-full py-3 rounded-xl bg-cta text-white font-bold hover:brightness-110">Salvează</button>
-            <button type="button" id="beBtnBack" class="w-full py-3 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50">Înapoi</button>
-        </div>
-    </form>
-</div>
-
-<form id="formBookingCancel" method="post" action="calendar.php" class="hidden" aria-hidden="true">
-    <?php lh_csrf_field(); ?>
-    <input type="hidden" name="calendar_action" value="booking_cancel">
-    <input type="hidden" name="booking_id" id="bcBookingId" value="">
-    <input type="hidden" name="redirect_from" value="<?php echo htmlspecialchars($fromYmd, ENT_QUOTES, 'UTF-8'); ?>">
-    <input type="hidden" name="redirect_days" value="<?php echo (int) $dayCount; ?>">
-</form>
 
 <!-- Modal preț special -->
 <div id="modalSpecial" class="fixed inset-0 z-[8000] hidden items-center justify-center bg-slate-900/70 p-4">
@@ -1002,6 +797,9 @@ include __DIR__ . '/includes/header.php';
         }
     }
 
+    const CAL_REDIRECT_FROM = <?php echo json_encode($fromYmd, JSON_UNESCAPED_UNICODE); ?>;
+    const CAL_REDIRECT_DAYS = <?php echo (int) $dayCount; ?>;
+
     function fillAndOpenBookingModal(rawAttr) {
         let b;
         try {
@@ -1009,90 +807,12 @@ include __DIR__ . '/includes/header.php';
         } catch (err) {
             return;
         }
-        window.calLastBooking = b;
-        const today = (() => {
-            const d = new Date();
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, '0');
-            const da = String(d.getDate()).padStart(2, '0');
-            return y + '-' + m + '-' + da;
-        })();
-        const co = b.check_out ? String(b.check_out) : '';
-        let st;
-        if (b.status === 'confirmed' && co !== '' && co < today) {
-            st = 'Finalizată';
-        } else if (b.status === 'confirmed') {
-            st = 'Activă';
-        } else if (b.status === 'pending') {
-            st = 'În așteptare';
-        } else {
-            st = b.status || '—';
+        if (window.LhBookingModal) {
+            window.LhBookingModal.setCalendarContext(CAL_REDIRECT_FROM, CAL_REDIRECT_DAYS);
+            window.LhBookingModal.open(b);
         }
-        document.getElementById('mbGuest').textContent = b.guest_name || '—';
-        document.getElementById('mbEmail').textContent = b.guest_email || '—';
-        document.getElementById('mbPhone').textContent = b.guest_phone || '—';
-        document.getElementById('mbRange').textContent = (b.check_in || '') + ' → ' + (b.check_out || '');
-        document.getElementById('mbStatus').textContent = st;
-        var coupRowEl = document.getElementById('mbCouponRow');
-        var coupDetailEl = document.getElementById('mbCouponDetail');
-        var coupDiscNum = typeof b.coupon_discount_amount === 'number' ? b.coupon_discount_amount : parseFloat(String(b.coupon_discount_amount || ''), 10) || 0;
-        var coupCodeStr = ((b && b.coupon_code) ? String(b.coupon_code) : '').trim();
-        if (coupRowEl && coupDetailEl && coupDiscNum > 0.004 && coupCodeStr !== '') {
-            coupRowEl.style.display = 'flex';
-            coupDetailEl.textContent =
-                '«' +
-                coupCodeStr +
-                '» · reducere ' +
-                Math.round(coupDiscNum).toLocaleString('ro-RO') +
-                lhCalCurrencySuffix() +
-                ' (din tariful nopților)';
-        } else if (coupRowEl && coupDetailEl) {
-            coupRowEl.style.display = 'none';
-            coupDetailEl.textContent = '';
-        }
-        document.getElementById('mbTotal').textContent = Math.round(b.total_price || 0).toLocaleString('ro-RO') + lhCalCurrencySuffix() + (b.guests ? (' · ' + b.guests + ' oaspeți') : '');
-        document.getElementById('mbLink').href = 'bookings.php?status=all&booking_id=' + encodeURIComponent(b.id) + '#booking-' + b.id;
-        openModal('modalBooking');
     }
 
-    document.getElementById('mbBtnEdit')?.addEventListener('click', function () {
-        const b = window.calLastBooking;
-        if (!b || !b.id) {
-            return;
-        }
-        const view = document.getElementById('modalBooking');
-        if (view) {
-            closeModalEl(view);
-        }
-        document.getElementById('beBookingId').value = String(b.id);
-        document.getElementById('beGuestName').value = b.guest_name || '';
-        document.getElementById('beGuestEmail').value = b.guest_email || '';
-        document.getElementById('beGuestPhone').value = b.guest_phone || '';
-        document.getElementById('beCheckIn').value = b.check_in || '';
-        document.getElementById('beCheckOut').value = b.check_out || '';
-        document.getElementById('beGuests').value = b.guests > 0 ? String(b.guests) : '1';
-        openModal('modalBookingEdit');
-    });
-
-    document.getElementById('mbBtnCancelBooking')?.addEventListener('click', function () {
-        const b = window.calLastBooking;
-        if (!b || !b.id) {
-            return;
-        }
-        if (!window.confirm('Sigur anulezi această rezervare? Perioada va fi eliberată în calendar.')) {
-            return;
-        }
-        document.getElementById('bcBookingId').value = String(b.id);
-        document.getElementById('formBookingCancel').submit();
-    });
-
-    document.getElementById('beBtnBack')?.addEventListener('click', function () {
-        const edit = document.getElementById('modalBookingEdit');
-        if (edit) {
-            closeModalEl(edit);
-        }
-        openModal('modalBooking');
-    });
     function closeModalEl(el) {
         el.classList.add('hidden');
         el.classList.remove('flex');

@@ -1,32 +1,30 @@
 <?php
+
+declare(strict_types=1);
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
-
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/booking_pricing.php';
 require_once __DIR__ . '/../includes/coupons.php';
 require_once __DIR__ . '/../includes/rate_limit.php';
-require_once __DIR__ . '/../includes/booking_notifications.php';
 require_once __DIR__ . '/../includes/booking_locale.php';
-require_once __DIR__ . '/../includes/booking_guest_email_bodies.php';
+require_once __DIR__ . '/../includes/booking_payment.php';
+require_once __DIR__ . '/../includes/booking_confirm.php';
+require_once __DIR__ . '/../includes/maib_client.php';
 
 $bookingLocale = lh_resolve_request_locale();
 
-$admin_notification_email = lh_booking_resolve_admin_notification_email();
-
-$telegram_bot_token = defined('TELEGRAM_BOT_TOKEN') ? trim((string) TELEGRAM_BOT_TOKEN) : '';
-$telegram_chat_id   = defined('TELEGRAM_CHAT_ID') ? trim((string) TELEGRAM_CHAT_ID) : '';
-
-function fail($message, $code = 400) {
+function fail($message, $code = 400, array $replace = []) {
     global $bookingLocale;
     if (is_string($message) && str_starts_with($message, 'api.')) {
-        $message = lh_translate($message, [], $bookingLocale ?? lh_default_locale());
+        $message = lh_translate($message, $replace, $bookingLocale ?? lh_default_locale());
     }
     http_response_code($code);
     echo json_encode([
         'success' => false,
-        'message' => $message
+        'message' => $message,
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -35,11 +33,7 @@ function fail_booking_tx(PDO $pdo, string $message, int $code = 400, array $repl
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    global $bookingLocale;
-    if (is_string($message) && str_starts_with($message, 'api.')) {
-        $message = lh_translate($message, $replace, $bookingLocale ?? lh_default_locale());
-    }
-    fail($message, $code);
+    fail($message, $code, $replace);
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -53,6 +47,16 @@ if (!lh_csrf_verify_post()) {
 $honeypot = trim((string) ($_POST['company'] ?? ''));
 if ($honeypot !== '') {
     fail('api.request_invalid', 400);
+}
+
+$termsAccepted = filter_var($_POST['terms_accepted'] ?? false, FILTER_VALIDATE_BOOLEAN);
+if (!$termsAccepted) {
+    fail('api.terms_required', 400);
+}
+
+$payment_method = strtolower(trim((string) ($_POST['payment_method'] ?? 'on_site')));
+if (!lh_booking_payment_method_valid($payment_method)) {
+    fail('api.payment_method_invalid', 400);
 }
 
 $property_id = filter_input(INPUT_POST, 'property_id', FILTER_VALIDATE_INT);
@@ -112,6 +116,11 @@ if ($checkOutDt <= $checkInDt) {
 
 try {
     $pdo = getPDO();
+    $hasPaymentCols = lh_bookings_has_payment_columns($pdo);
+
+    if ($payment_method === 'online' && (!$hasPaymentCols || !lh_maib_configured())) {
+        fail('api.online_payment_unavailable', 503);
+    }
 
     $pdo->beginTransaction();
 
@@ -123,7 +132,7 @@ try {
         fail_booking_tx($pdo, 'api.property_not_found', 404);
     }
 
-    if (!empty($property['sleep_capacity']) && $guests > (int)$property['sleep_capacity']) {
+    if (!empty($property['sleep_capacity']) && $guests > (int) $property['sleep_capacity']) {
         fail_booking_tx($pdo, 'api.guests_over_capacity');
     }
 
@@ -133,13 +142,11 @@ try {
         fail_booking_tx($pdo, 'api.min_stay', 400, ['n' => (string) $effMinStay]);
     }
 
-    $lockBlocks = $pdo->prepare(
-        'SELECT id FROM blocked_dates WHERE property_id = :property_id FOR UPDATE'
-    );
+    $lockBlocks = $pdo->prepare('SELECT id FROM blocked_dates WHERE property_id = :property_id FOR UPDATE');
     $lockBlocks->execute([':property_id' => $property_id]);
 
     $overlap = $pdo->prepare("
-        SELECT COUNT(*) 
+        SELECT COUNT(*)
         FROM blocked_dates
         WHERE property_id = :property_id
           AND start_date < :check_out
@@ -151,7 +158,7 @@ try {
         ':check_out'   => $check_out,
     ]);
 
-    if ((int)$overlap->fetchColumn() > 0) {
+    if ((int) $overlap->fetchColumn() > 0) {
         fail_booking_tx($pdo, 'api.period_unavailable');
     }
 
@@ -159,8 +166,9 @@ try {
     if ($nights < 1) {
         fail_booking_tx($pdo, 'api.min_one_night');
     }
+
     $pricing = lh_booking_stay_total($property, $check_in, $check_out, (int) $guests);
-    $total_price = $pricing['total'];
+    $subtotal = (float) $pricing['total'];
 
     $coupon_id_ins = null;
     $coupon_code_ins = null;
@@ -183,164 +191,218 @@ try {
             $coupon_id_ins = (int) ($cRow['id'] ?? 0);
             $coupon_code_ins = lh_coupon_normalize_code($coupon_code_raw);
             $coupon_discount_ins = (float) $resolved['discount'];
-            $total_price = max(0.0, $total_price - $coupon_discount_ins);
+            $subtotal = max(0.0, $subtotal - $coupon_discount_ins);
         }
     }
 
-    $insertBooking = $pdo->prepare(
-        lh_bookings_has_locale_column($pdo)
-            ? "INSERT INTO bookings (
-            property_id, guest_name, guest_phone, guest_email,
-            check_in, check_out, guests, total_price,
-            coupon_id, coupon_code, coupon_discount_amount,
-            status, locale
-        ) VALUES (
-            :property_id, :guest_name, :guest_phone, :guest_email,
-            :check_in, :check_out, :guests, :total_price,
-            :coupon_id, :coupon_code, :coupon_discount_amount,
-            'confirmed', :locale
-        )"
-            : "INSERT INTO bookings (
-            property_id, guest_name, guest_phone, guest_email,
-            check_in, check_out, guests, total_price,
-            coupon_id, coupon_code, coupon_discount_amount, status
-        ) VALUES (
-            :property_id, :guest_name, :guest_phone, :guest_email,
-            :check_in, :check_out, :guests, :total_price,
-            :coupon_id, :coupon_code, :coupon_discount_amount, 'confirmed'
-        )"
-    );
+    $payTotals = lh_booking_payment_totals($subtotal);
+    $total_price = $payTotals['on_site_total'];
+    $payment_due = $payment_method === 'online' ? $payTotals['online_total'] : $total_price;
 
-    $insertParams = [
-        ':property_id' => $property_id,
-        ':guest_name'  => $guest_name,
-        ':guest_phone' => $guest_phone,
-        ':guest_email' => $guest_email,
-        ':check_in'    => $check_in,
-        ':check_out'   => $check_out,
-        ':guests'      => $guests,
-        ':total_price' => $total_price,
-        ':coupon_id' => $coupon_id_ins,
-        ':coupon_code' => $coupon_code_ins,
-        ':coupon_discount_amount' => $coupon_discount_ins,
-    ];
+    if ($payment_due < 0.01) {
+        fail_booking_tx($pdo, 'api.payment_amount_invalid');
+    }
+
+    $bookingStatus = $payment_method === 'online' ? 'pending' : 'confirmed';
+    $paymentStatus = $payment_method === 'online' ? 'pending' : 'pay_at_property';
+    $ttlMinutes = lh_booking_pending_ttl_minutes();
+    $expiresAt = (new DateTimeImmutable('now'))->modify('+' . $ttlMinutes . ' minutes')->format('Y-m-d H:i:s');
+
+    if ($hasPaymentCols) {
+        $insertBooking = $pdo->prepare(
+            lh_bookings_has_locale_column($pdo)
+                ? "INSERT INTO bookings (
+                property_id, guest_name, guest_phone, guest_email,
+                check_in, check_out, guests, total_price,
+                coupon_id, coupon_code, coupon_discount_amount,
+                status, payment_method, payment_status,
+                online_discount_percent, online_discount_amount,
+                payment_due_amount, payment_expires_at, locale
+            ) VALUES (
+                :property_id, :guest_name, :guest_phone, :guest_email,
+                :check_in, :check_out, :guests, :total_price,
+                :coupon_id, :coupon_code, :coupon_discount_amount,
+                :status, :payment_method, :payment_status,
+                :online_discount_percent, :online_discount_amount,
+                :payment_due_amount, :payment_expires_at, :locale
+            )"
+                : "INSERT INTO bookings (
+                property_id, guest_name, guest_phone, guest_email,
+                check_in, check_out, guests, total_price,
+                coupon_id, coupon_code, coupon_discount_amount,
+                status, payment_method, payment_status,
+                online_discount_percent, online_discount_amount,
+                payment_due_amount, payment_expires_at
+            ) VALUES (
+                :property_id, :guest_name, :guest_phone, :guest_email,
+                :check_in, :check_out, :guests, :total_price,
+                :coupon_id, :coupon_code, :coupon_discount_amount,
+                :status, :payment_method, :payment_status,
+                :online_discount_percent, :online_discount_amount,
+                :payment_due_amount, :payment_expires_at
+            )"
+        );
+
+        $insertParams = [
+            ':property_id' => $property_id,
+            ':guest_name'  => $guest_name,
+            ':guest_phone' => $guest_phone,
+            ':guest_email' => $guest_email,
+            ':check_in'    => $check_in,
+            ':check_out'   => $check_out,
+            ':guests'      => $guests,
+            ':total_price' => $total_price,
+            ':coupon_id' => $coupon_id_ins,
+            ':coupon_code' => $coupon_code_ins,
+            ':coupon_discount_amount' => $coupon_discount_ins,
+            ':status' => $bookingStatus,
+            ':payment_method' => $payment_method,
+            ':payment_status' => $paymentStatus,
+            ':online_discount_percent' => $payTotals['online_discount_percent'],
+            ':online_discount_amount' => $payTotals['online_discount_amount'],
+            ':payment_due_amount' => $payment_due,
+            ':payment_expires_at' => $payment_method === 'online' ? $expiresAt : null,
+        ];
+    } else {
+        $insertBooking = $pdo->prepare(
+            lh_bookings_has_locale_column($pdo)
+                ? "INSERT INTO bookings (
+                property_id, guest_name, guest_phone, guest_email,
+                check_in, check_out, guests, total_price,
+                coupon_id, coupon_code, coupon_discount_amount,
+                status, locale
+            ) VALUES (
+                :property_id, :guest_name, :guest_phone, :guest_email,
+                :check_in, :check_out, :guests, :total_price,
+                :coupon_id, :coupon_code, :coupon_discount_amount,
+                'confirmed', :locale
+            )"
+                : "INSERT INTO bookings (
+                property_id, guest_name, guest_phone, guest_email,
+                check_in, check_out, guests, total_price,
+                coupon_id, coupon_code, coupon_discount_amount, status
+            ) VALUES (
+                :property_id, :guest_name, :guest_phone, :guest_email,
+                :check_in, :check_out, :guests, :total_price,
+                :coupon_id, :coupon_code, :coupon_discount_amount, 'confirmed'
+            )"
+        );
+
+        $insertParams = [
+            ':property_id' => $property_id,
+            ':guest_name'  => $guest_name,
+            ':guest_phone' => $guest_phone,
+            ':guest_email' => $guest_email,
+            ':check_in'    => $check_in,
+            ':check_out'   => $check_out,
+            ':guests'      => $guests,
+            ':total_price' => $total_price,
+            ':coupon_id' => $coupon_id_ins,
+            ':coupon_code' => $coupon_code_ins,
+            ':coupon_discount_amount' => $coupon_discount_ins,
+        ];
+    }
+
     if (lh_bookings_has_locale_column($pdo)) {
         $insertParams[':locale'] = $bookingLocale;
     }
 
     $insertBooking->execute($insertParams);
+    $booking_id = (int) $pdo->lastInsertId();
 
-    $booking_id = (int)$pdo->lastInsertId();
-
+    $blockSource = $payment_method === 'online' ? 'pending_payment' : 'direct_booking';
     $insertBlock = $pdo->prepare("
         INSERT INTO blocked_dates (
-            property_id,
-            start_date,
-            end_date,
-            source,
-            external_event_id,
-            notes
+            property_id, start_date, end_date, source, external_event_id, notes
         ) VALUES (
-            :property_id,
-            :start_date,
-            :end_date,
-            'direct_booking',
-            :external_event_id,
-            :notes
+            :property_id, :start_date, :end_date, :source, :external_event_id, :notes
         )
     ");
-
     $insertBlock->execute([
         ':property_id'       => $property_id,
         ':start_date'        => $check_in,
         ':end_date'          => $check_out,
+        ':source'            => $blockSource,
         ':external_event_id' => 'booking-' . $booking_id,
         ':notes'             => 'Booking #' . $booking_id,
     ]);
 
+    $checkout_url = null;
+    $checkout_id = null;
+
+    if ($payment_method === 'online' && $hasPaymentCols) {
+        $property_title = $property['title'] ?? ('Property #' . $property_id);
+        if (function_exists('lh_property_apply_locale')) {
+            $propertyLocalized = lh_property_apply_locale($property, $pdo, $bookingLocale);
+            $property_title = $propertyLocalized['title'] ?? $property_title;
+        }
+
+        $urls = lh_maib_payment_urls($bookingLocale);
+        $orderId = 'LH-' . $booking_id;
+        $checkoutPayload = [
+            'amount' => $payment_due,
+            'currency' => lh_currency_code(),
+            'callbackUrl' => $urls['callbackUrl'],
+            'successUrl' => $urls['successUrl'],
+            'failUrl' => $urls['failUrl'],
+            'language' => lh_maib_checkout_language($bookingLocale),
+            'orderInfo' => [
+                'id' => $orderId,
+                'description' => mb_substr($property_title . ' · ' . $check_in . ' → ' . $check_out, 0, 120),
+                'date' => (new DateTimeImmutable('now'))->format('c'),
+                'orderAmount' => $payment_due,
+                'orderCurrency' => lh_currency_code(),
+            ],
+            'payerInfo' => [
+                'name' => $guest_name,
+                'email' => $guest_email,
+                'phone' => preg_replace('/\D+/', '', $guest_phone),
+                'ip' => $clientIp,
+                'userAgent' => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 512),
+            ],
+        ];
+
+        try {
+            $checkout = lh_maib_create_checkout($checkoutPayload);
+            $checkout_id = $checkout->checkoutId;
+            $checkout_url = $checkout->checkoutUrl;
+
+            $pdo->prepare('UPDATE bookings SET maib_checkout_id = ? WHERE id = ?')
+                ->execute([$checkout_id, $booking_id]);
+        } catch (Throwable $e) {
+            error_log('create_booking maib error: ' . $e->getMessage());
+            fail_booking_tx($pdo, 'api.payment_init_failed', 502);
+        }
+    }
+
     $pdo->commit();
 
-    $property_title = $property['title'] ?? ('Property #' . $property_id);
-    if (function_exists('lh_property_apply_locale')) {
-        $property = lh_property_apply_locale($property, $pdo, $bookingLocale);
-        $property_title = $property['title'] ?? $property_title;
-    }
+    if ($payment_method === 'on_site') {
+        $stmtFresh = $pdo->prepare('SELECT * FROM bookings WHERE id = ? LIMIT 1');
+        $stmtFresh->execute([$booking_id]);
+        $bookingRow = $stmtFresh->fetch(PDO::FETCH_ASSOC) ?: [];
 
-    $admin_subject = 'Rezervare nouă #' . $booking_id . ' - ' . $property_title;
-    $admin_message = "Ai primit o rezervare nouă pe site.\n\n"
-        . "Booking ID: #" . $booking_id . "\n"
-        . "Proprietate: " . $property_title . "\n"
-        . "Nume client: " . $guest_name . "\n"
-        . "Telefon: " . $guest_phone . "\n"
-        . "Email: " . $guest_email . "\n"
-        . "Check-in: " . $check_in . "\n"
-        . "Check-out: " . $check_out . "\n"
-        . "Oaspeți: " . $guests . "\n"
-        . ($coupon_discount_ins > 0.004 && $coupon_code_ins !== null && trim((string) $coupon_code_ins) !== ''
-            ? ('Reducere cupon «' . trim((string) $coupon_code_ins) . '»: ' . lh_format_money((float) $coupon_discount_ins, 2) . ' (din tariful nopților)' . "\n")
-            : '')
-        . 'Total: ' . lh_format_money((float) $total_price, 2) . "\n"
-        . "Status: confirmată automat\n";
+        lh_booking_send_confirmation_notifications($pdo, $bookingRow, $property, $bookingLocale, false);
 
-    if (!empty($admin_notification_email)) {
-        $admin_sent = send_booking_notification($admin_notification_email, $admin_subject, $admin_message, $guest_email);
-        if (!$admin_sent) {
-            error_log('create_booking notification error: admin email could not be sent for booking #' . $booking_id);
-        }
-    } else {
-        error_log('create_booking notification skipped: ADMIN_NOTIFICATION_EMAIL / SERVER_ADMIN not configured');
-    }
-
-    $telegram_message = "🔔 Rezervare nouă\n\n"
-        . "Booking ID: #" . $booking_id . "\n"
-        . "Proprietate: " . $property_title . "\n"
-        . "Nume: " . $guest_name . "\n"
-        . "Telefon: " . $guest_phone . "\n"
-        . "Email: " . $guest_email . "\n"
-        . "Check-in: " . $check_in . "\n"
-        . "Check-out: " . $check_out . "\n"
-        . "Oaspeți: " . $guests . "\n"
-        . ($coupon_discount_ins > 0.004 && $coupon_code_ins !== null && trim((string) $coupon_code_ins) !== ''
-            ? ('Reducere cupon «' . trim((string) $coupon_code_ins) . '»: ' . lh_format_money((float) $coupon_discount_ins, 2) . ' (din tariful nopților)' . "\n")
-            : '')
-        . 'Total: ' . lh_format_money((float) $total_price, 2) . "\n"
-        . "Status: confirmată automat";
-
-    if (!empty($telegram_bot_token) && !empty($telegram_chat_id)) {
-        $telegram_sent = send_telegram_notification($telegram_bot_token, $telegram_chat_id, $telegram_message);
-        if (!$telegram_sent) {
-            error_log('create_booking notification error: telegram message could not be sent for booking #' . $booking_id);
-        }
-    } else {
-        error_log('create_booking notification skipped: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not configured');
-    }
-
-    $client_subject = lh_translate('email.confirm_subject', [], $bookingLocale);
-    $guestBodyCtx = [
-        'guest_name' => $guest_name,
-        'property_title' => $property_title,
-        'check_in' => $check_in,
-        'check_out' => $check_out,
-        'guests' => (int) $guests,
-        'total_price' => (float) $total_price,
-        'booking_id' => (int) $booking_id,
-        'locale' => $bookingLocale,
-    ];
-    if ($coupon_discount_ins > 0.004 && $coupon_code_ins !== null && trim((string) $coupon_code_ins) !== '') {
-        $guestBodyCtx['coupon_code'] = (string) $coupon_code_ins;
-        $guestBodyCtx['coupon_discount_amount'] = (float) $coupon_discount_ins;
-    }
-    $client_message = lh_build_guest_booking_confirmation_body($guestBodyCtx);
-
-    $client_sent = send_booking_notification($guest_email, $client_subject, $client_message, $admin_notification_email);
-    if (!$client_sent) {
-        error_log('create_booking notification error: client email could not be sent for booking #' . $booking_id);
+        echo json_encode([
+            'success' => true,
+            'message' => lh_translate('api.booking_success', [], $bookingLocale),
+            'booking_id' => $booking_id,
+            'payment_method' => 'on_site',
+            'total_price' => $total_price,
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 
     echo json_encode([
         'success' => true,
-        'message' => lh_translate('api.booking_success', [], $bookingLocale),
+        'message' => lh_translate('api.payment_redirect', [], $bookingLocale),
         'booking_id' => $booking_id,
+        'payment_method' => 'online',
+        'checkout_url' => $checkout_url,
+        'checkout_id' => $checkout_id,
+        'payment_due_amount' => $payment_due,
+        'online_discount_amount' => $payTotals['online_discount_amount'],
         'total_price' => $total_price,
     ], JSON_UNESCAPED_UNICODE);
     exit;

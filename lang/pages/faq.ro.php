@@ -10,11 +10,11 @@ return [
     ],
     [
         'q' => 'Este sigură rezervarea online?',
-        'a' => 'Da. Folosim metode de plată securizate și parteneri de încredere. Datele tale sunt protejate conform standardelor actuale de securitate.',
+        'a' => 'Da. Plata online se face securizat prin maib (pagina băncii), cu card Visa/Mastercard. Alternativ poți alege plata integrală la check-in (numerar sau card). Datele cardului nu sunt stocate pe site-ul Like HOME.',
     ],
     [
         'q' => 'Pot modifica sau anula rezervarea?',
-        'a' => 'Da, în funcție de politica aleasă. Oferim opțiuni flexibile, inclusiv anulare gratuită pentru anumite tarife.',
+        'a' => 'Da, în funcție de condițiile afișate la rezervare. Pentru plăți online prin maib, anularea cu rambursare integrală este posibilă dacă soliciți anularea cu cel puțin 24 de ore înainte de check-in (vezi Termeni și condiții).',
     ],
     [
         'q' => 'La ce oră este check-in și check-out?',
@@ -30,7 +30,7 @@ return [
     ],
     [
         'q' => 'Cum se face plata pentru cazare?',
-        'a' => 'Plata se face online, cu cardul, sau prin platforme precum Booking și Airbnb. În unele cazuri, acceptăm și transfer bancar.',
+        'a' => 'Poți plăti online acum (cu reducere configurabilă) prin maib — suma se achită la rezervare, pe pagina securizată a băncii. Sau poți alege plata integrală la check-in (numerar/card). Moneda: MDL.',
     ],
     [
         'q' => 'Prețul include toate taxele?',

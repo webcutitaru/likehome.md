@@ -77,5 +77,6 @@
     <img id="lh-admin-img-lightbox-img" src="" alt="" class="max-h-[calc(100vh-5rem)] max-w-full cursor-default object-contain select-none">
 </div>
 <script src="../assets/js/admin-property-image-lightbox.js" defer></script>
+<?php require_once __DIR__ . '/booking_detail_modal.php'; ?>
 </body>
 </html>

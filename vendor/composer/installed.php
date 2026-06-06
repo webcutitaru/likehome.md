@@ -1,13 +1,13 @@
 <?php return array(
     'root' => array(
         'name' => 'likehome/site',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => 'a9e6f6e7cb9084effa4db79d532a7ca161ac602d',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'dev' => false,
+        'dev' => true,
     ),
     'versions' => array(
         'guzzlehttp/guzzle' => array(
@@ -38,11 +38,20 @@
             'dev_requirement' => false,
         ),
         'likehome/site' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => 'a9e6f6e7cb9084effa4db79d532a7ca161ac602d',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'maib-ecomm/maib-checkout-sdk-php' => array(
+            'pretty_version' => 'v1.0.3',
+            'version' => '1.0.3.0',
+            'reference' => 'bc1f5da4aba26013a8b15e0d2406802b5c99bd10',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../maib-ecomm/maib-checkout-sdk-php',
             'aliases' => array(),
             'dev_requirement' => false,
         ),

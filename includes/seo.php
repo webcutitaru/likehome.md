@@ -18,18 +18,39 @@ if (!function_exists('lh_public_site_origin')) {
     }
 }
 
+if (!function_exists('lh_join_site_origin_and_path')) {
+    /**
+     * Join PUBLIC_SITE_URL with a path from lh_public_url / lh_locale_url.
+     * Avoids doubling SITE_BASE_PATH when PUBLIC_SITE_URL already includes it.
+     */
+    function lh_join_site_origin_and_path(string $rel): string
+    {
+        $origin = lh_public_site_origin();
+        if ($rel === '' || $rel === '/') {
+            return $origin . '/';
+        }
+
+        $base = defined('SITE_BASE_PATH') ? SITE_BASE_PATH : '';
+        if ($base !== '' && str_ends_with($origin, $base)) {
+            if ($rel === $base || $rel === $base . '/') {
+                return $origin . '/';
+            }
+            if (str_starts_with($rel, $base . '/')) {
+                $rel = substr($rel, strlen($base));
+            }
+        }
+
+        return $origin . $rel;
+    }
+}
+
 if (!function_exists('lh_absolute_url')) {
     /**
      * Absolute URL for a path or script+query string understood by lh_public_url().
      */
     function lh_absolute_url(string $path = ''): string
     {
-        $rel = lh_public_url($path);
-        if ($rel === '' || $rel === '/') {
-            return lh_public_site_origin() . '/';
-        }
-
-        return lh_public_site_origin() . $rel;
+        return lh_join_site_origin_and_path(lh_public_url($path));
     }
 }
 

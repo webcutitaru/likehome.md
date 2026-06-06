@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/booking_pricing.php';
+require_once __DIR__ . '/includes/booking_payment.php';
 require_once __DIR__ . '/includes/property_amenity_catalog.php';
 require_once __DIR__ . '/components/property_card.php';
 
@@ -670,6 +671,7 @@ Fără imagini
 <div id="lh-confirm-extra-line" class="hidden font-medium text-ink tabular-nums leading-snug"></div>
 <p id="lh-confirm-extra-note" class="hidden text-[10px] text-blue-grey font-medium leading-snug m-0"></p>
 </div>
+<div class="flex flex-col gap-0.5 border-b border-black/6 pb-2"><dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide"><?= htmlspecialchars(__('booking.payment_method_label'), ENT_QUOTES, 'UTF-8') ?></dt><dd id="lh-confirm-payment-method" class="font-medium text-ink"></dd></div>
 <div class="lh-confirm-pricing-row border-b border-black/6 pb-2">
 <dt class="text-blue-grey font-semibold text-xs uppercase tracking-wide lh-confirm-pricing-label"><?= htmlspecialchars(__('booking.confirm_total_label'), ENT_QUOTES, 'UTF-8') ?></dt>
 <dd id="lh-confirm-total" class="font-bold text-cta m-0 tabular-nums"></dd>
@@ -1362,6 +1364,7 @@ function lhApplyCouponLayerToTotals(pricingSync, cinYmd, coutYmd, nights) {
       couponLineEl.classList.add('hidden');
     }
     if (totalPrice) totalPrice.textContent = pricingSync.total.toFixed(0) + lhCurrencySuffix();
+    lhUpdatePaymentMethodAmounts(pricingSync.total);
     lhLastPricePreview = null;
     if (breakdown) {
       var showB =
@@ -1383,6 +1386,7 @@ function lhApplyCouponLayerToTotals(pricingSync, cinYmd, coutYmd, nights) {
     }
     if (couponLineEl) couponLineEl.classList.add('hidden');
     if (totalPrice) totalPrice.textContent = pricingSync.total.toFixed(0) + lhCurrencySuffix();
+    lhUpdatePaymentMethodAmounts(pricingSync.total);
     return;
   }
   if (lhLastPricePreview.coupon_error) {
@@ -1407,8 +1411,9 @@ function lhApplyCouponLayerToTotals(pricingSync, cinYmd, coutYmd, nights) {
     }
   }
   var totNum = parseFloat(String(lhLastPricePreview.total));
-  if (totalPrice && !isNaN(totNum))
-    totalPrice.textContent = totNum.toFixed(0) + lhCurrencySuffix();
+  var onSiteNum = parseFloat(String(lhLastPricePreview.on_site_total || lhLastPricePreview.total));
+  if (isNaN(onSiteNum)) onSiteNum = totNum;
+  if (!isNaN(totNum)) lhUpdatePaymentMethodAmounts(onSiteNum);
   if (breakdown) {
     var showB2 =
       pricingSync.baseLine ||
@@ -1563,6 +1568,79 @@ function lhUpdateTotalBoxFromRange(checkInYmd, checkOutYmd, nights) {
 var propertyId = <?= (int)$property['id'] ?>;
 var propertyTitle = <?= json_encode((string)($property['title'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
 var bookingCsrf = <?= json_encode(lh_csrf_token(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+var lhOnlineDiscountPercent = <?= json_encode((float) lh_booking_online_discount_percent(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+function lhGetPaymentMethod() {
+  var r = document.querySelector('input[name="booking_payment_method"]:checked');
+  return r && r.value === 'online' ? 'online' : 'on_site';
+}
+
+function lhGetTermsAccepted() {
+  var el = document.getElementById('bookingTermsAccepted');
+  return !!(el && el.checked);
+}
+
+function lhCalcOnlineTotal(onSiteTotal) {
+  var pct = parseFloat(String(lhOnlineDiscountPercent)) || 0;
+  if (pct <= 0) return onSiteTotal;
+  return Math.max(0, Math.round((onSiteTotal - onSiteTotal * pct / 100) * 100) / 100);
+}
+
+function lhUpdatePaymentMethodAmounts(onSiteTotal) {
+  var onSiteEl = document.getElementById('lh-pay-on-site-amount');
+  var onlineEl = document.getElementById('lh-pay-online-amount');
+  var onlineTotal = lhCalcOnlineTotal(onSiteTotal);
+  var suffix = lhCurrencySuffix();
+  if (onSiteEl) onSiteEl.textContent = onSiteTotal.toFixed(0) + suffix;
+  if (onlineEl) onlineEl.textContent = onlineTotal.toFixed(0) + suffix;
+  lhUpdateReserveButtonLabel();
+  lhUpdateMainTotalDisplay(onSiteTotal, onlineTotal);
+}
+
+function lhUpdateMainTotalDisplay(onSiteTotal, onlineTotal) {
+  var totalPrice = document.getElementById('totalPrice');
+  var label = document.getElementById('lh-total-pay-label');
+  var onlineLine = document.getElementById('lh-total-online-discount-line');
+  if (!totalPrice) return;
+  var method = lhGetPaymentMethod();
+  var show = method === 'online' ? onlineTotal : onSiteTotal;
+  totalPrice.textContent = show.toFixed(0) + lhCurrencySuffix();
+  if (label) {
+    label.textContent = method === 'online'
+      ? (typeof lhT === 'function' ? lhT('booking.payment_due_now') : 'De plată acum:')
+      : (typeof lhT === 'function' ? lhT('booking.total_pay') : 'Total de plată:');
+  }
+  if (onlineLine) {
+    if (method === 'online' && lhOnlineDiscountPercent > 0 && onSiteTotal > onlineTotal) {
+      onlineLine.textContent = typeof lhT === 'function'
+        ? lhT('booking.online_discount_line', { pct: String(lhOnlineDiscountPercent), amount: (onSiteTotal - onlineTotal).toFixed(0) + lhCurrencySuffix() })
+        : '';
+      onlineLine.classList.remove('hidden');
+    } else {
+      onlineLine.textContent = '';
+      onlineLine.classList.add('hidden');
+    }
+  }
+}
+
+function lhUpdateReserveButtonLabel() {
+  var label = document.getElementById('reserveBtnLabel');
+  if (!label) return;
+  label.textContent = lhGetPaymentMethod() === 'online'
+    ? (typeof lhT === 'function' ? lhT('booking.continue_payment') : 'Continuă la plată')
+    : <?= json_encode(__('booking.book_now'), JSON_UNESCAPED_UNICODE) ?>;
+}
+
+(function () {
+  document.querySelectorAll('input[name="booking_payment_method"]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      var onSite = lhLastPricePreview ? parseFloat(String(lhLastPricePreview.on_site_total || lhLastPricePreview.total || 0)) : parseFloat(String(document.getElementById('totalPrice')?.textContent || 0));
+      if (isNaN(onSite)) onSite = 0;
+      lhUpdatePaymentMethodAmounts(onSite);
+    });
+  });
+  lhUpdateReserveButtonLabel();
+})();
 
 var lhPendingBooking = null;
 var lhConfirmModalLastFocus = null;
@@ -1783,7 +1861,13 @@ function lhOpenBookingConfirmModal(payload) {
     else breakWrap.classList.add('hidden');
   }
   document.getElementById('lh-confirm-total').textContent =
-    (payload.totalEuro ? payload.totalEuro.toFixed(0) : '0') + lhCurrencySuffix();
+    (payload.displayTotal ? payload.displayTotal.toFixed(0) : (payload.totalEuro ? payload.totalEuro.toFixed(0) : '0')) + lhCurrencySuffix();
+  var payMethodEl = document.getElementById('lh-confirm-payment-method');
+  if (payMethodEl) {
+    payMethodEl.textContent = payload.paymentMethod === 'online'
+      ? (typeof lhT === 'function' ? lhT('booking.payment_online') : 'Plată online')
+      : (typeof lhT === 'function' ? lhT('booking.payment_on_site') : 'Plată la check-in');
+  }
   document.getElementById('lh-confirm-name').textContent = payload.guestName;
   document.getElementById('lh-confirm-phone').textContent = payload.guestPhone;
   document.getElementById('lh-confirm-email').textContent = payload.guestEmail;
@@ -1848,6 +1932,8 @@ function lhExecuteBookingRequest(payload) {
       guests: payload.guests,
       coupon_code: payload.couponCode || '',
       locale: window.lhLocale || 'ro',
+      payment_method: payload.paymentMethod || 'on_site',
+      terms_accepted: '1',
     }),
   })
     .then(function (r) {
@@ -1857,6 +1943,10 @@ function lhExecuteBookingRequest(payload) {
       lhSetLoading(false);
       var label = document.getElementById('reserveBtnLabel');
       if (resp.success) {
+        if (resp.payment_method === 'online' && resp.checkout_url) {
+          window.location.href = resp.checkout_url;
+          return;
+        }
         if (msg) {
           msg.innerHTML = '';
           msg.className = 'text-xs text-center mt-3 text-blue-grey';
@@ -2276,6 +2366,13 @@ lhShowToast(typeof lhT==='function'?lhT('booking.fill_email'):'', 'error');
 return;
 }
 
+if(!lhGetTermsAccepted()){
+msg.innerHTML=typeof lhT==='function'?lhT('booking.terms_required'):'';
+msg.className="text-xs text-center mt-3 font-semibold text-red-800";
+lhShowToast(typeof lhT==='function'?lhT('booking.terms_required'):'', 'error');
+return;
+}
+
 var guests=document.getElementById('guests').value;
 var nights=nightsEarly;
 var gInt = parseInt(String(guests), 10) || 1;
@@ -2289,6 +2386,7 @@ if (coupReserve !== '' && !lhPricePreviewReadyForSubmit(checkin, checkout, guest
   return;
 }
 var totalEuroRes = pr.total;
+var displayTotalRes = totalEuroRes;
 var pricingCouponLineRes = '';
 if (coupReserve !== '' && lhLastPricePreview) {
   var tNv = parseFloat(String(lhLastPricePreview.total));
@@ -2298,6 +2396,12 @@ if (coupReserve !== '' && lhLastPricePreview) {
     pricingCouponLineRes = lhFormatCouponLine(coupReserve, cdNv);
   }
 }
+var paymentMethod = lhGetPaymentMethod();
+var onSiteTotal = lhLastPricePreview && lhLastPricePreview.on_site_total != null
+  ? parseFloat(String(lhLastPricePreview.on_site_total))
+  : totalEuroRes;
+if (isNaN(onSiteTotal)) onSiteTotal = totalEuroRes;
+displayTotalRes = paymentMethod === 'online' ? lhCalcOnlineTotal(onSiteTotal) : onSiteTotal;
 
 lhOpenBookingConfirmModal({
 guestName:guestName,
@@ -2308,6 +2412,8 @@ checkout:checkout,
 guests:guests,
 nights:nights,
 totalEuro: totalEuroRes,
+displayTotal: displayTotalRes,
+paymentMethod: paymentMethod,
 pricingBaseLine: pr.baseLine || '',
 pricingDiscountLine: pr.discountLine || '',
 pricingCouponLine: pricingCouponLineRes,

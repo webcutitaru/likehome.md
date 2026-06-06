@@ -336,6 +336,54 @@
             "install-path": "../guzzlehttp/psr7"
         },
         {
+            "name": "maib-ecomm/maib-checkout-sdk-php",
+            "version": "v1.0.3",
+            "version_normalized": "1.0.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/maib-ecomm/maib-checkout-sdk-php.git",
+                "reference": "bc1f5da4aba26013a8b15e0d2406802b5c99bd10"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/maib-ecomm/maib-checkout-sdk-php/zipball/bc1f5da4aba26013a8b15e0d2406802b5c99bd10",
+                "reference": "bc1f5da4aba26013a8b15e0d2406802b5c99bd10",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-json": "*",
+                "php": ">=5.6.0"
+            },
+            "time": "2026-04-01T13:07:26+00:00",
+            "type": "library",
+            "installation-source": "dist",
+            "autoload": {
+                "psr-4": {
+                    "MaibEcomm\\MaibCheckoutSdk\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "PHP SDK for maib checkout API",
+            "homepage": "https://github.com/maib-ecomm/maib-checkout-sdk-php",
+            "keywords": [
+                "api",
+                "checkout",
+                "maib",
+                "payments",
+                "php",
+                "sdk"
+            ],
+            "support": {
+                "issues": "https://github.com/maib-ecomm/maib-checkout-sdk-php/issues",
+                "source": "https://github.com/maib-ecomm/maib-checkout-sdk-php/tree/v1.0.3"
+            },
+            "install-path": "../maib-ecomm/maib-checkout-sdk-php"
+        },
+        {
             "name": "mailjet/mailjet-apiv3-php",
             "version": "v1.6.6",
             "version_normalized": "1.6.6.0",
@@ -1219,6 +1267,6 @@
             "install-path": "../symfony/validator"
         }
     ],
-    "dev": false,
+    "dev": true,
     "dev-package-names": []
 }
