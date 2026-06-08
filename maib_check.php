@@ -63,7 +63,45 @@ line('  callbackUrl', $urls['callbackUrl']);
 line('  successUrl', $urls['successUrl']);
 line('  failUrl', $urls['failUrl']);
 
-echo "\n--- Step 1: auth token ---\n";
+echo "\n--- Step 0: raw HTTP to maib auth/token (bypass SDK) ---\n";
+$baseUrl = lh_maib_api_base_url() ?? 'https://api.maibmerchants.md/v2/';
+$tokenUrl = rtrim($baseUrl, '/') . '/auth/token';
+$rawPayload = json_encode([
+    'clientId' => trim(lh_env('MAIB_CLIENT_ID', '')),
+    'clientSecret' => trim(lh_env('MAIB_CLIENT_SECRET', '')),
+], JSON_UNESCAPED_UNICODE);
+
+$rawBody = '';
+$rawCode = 0;
+$rawErr = '';
+if (function_exists('curl_init')) {
+    $ch = curl_init($tokenUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $rawPayload,
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_CONNECTTIMEOUT => 30,
+        CURLOPT_TIMEOUT => 45,
+    ]);
+    $rawBody = (string) curl_exec($ch);
+    $rawCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    if (curl_errno($ch)) {
+        $rawErr = curl_error($ch);
+    }
+    curl_close($ch);
+}
+
+line('POST URL', $tokenUrl);
+line('HTTP status', $rawErr !== '' ? 'curl error: ' . $rawErr : (string) $rawCode);
+$preview = trim($rawBody);
+if ($preview === '') {
+    echo "Response body: (empty)\n";
+} else {
+    echo "Response body (first 800 chars):\n" . substr($preview, 0, 800) . (strlen($preview) > 800 ? "\n…" : '') . "\n";
+}
+
+echo "\n--- Step 1: auth token (SDK) ---\n";
 try {
     $token = lh_maib_access_token();
     line('Result', 'OK — token ' . strlen($token) . ' chars');
@@ -73,6 +111,10 @@ try {
     if ($e->getPrevious()) {
         echo 'Previous: ' . $e->getPrevious()->getMessage() . "\n";
     }
+    echo "\nLikely causes when Step 0 body is not maib JSON with ok/errors:\n";
+    echo "  • hosting firewall blocks outbound HTTPS to sandbox.maibmerchants.md\n";
+    echo "  • proxy/WAF returns HTML or generic JSON instead of maib API\n";
+    echo "  • ask host to whitelist outbound :443 to sandbox.maibmerchants.md\n";
     exit;
 }
 
